@@ -50,7 +50,9 @@ public class FileSrv {
 	 * @return the directory name for a specific event
 	 */
 	private String buildDirName(Event event) {
+		String name = event.getName().replaceAll("[\\\\/:*?\"<>|]", "-");
+
 		return dayFormat.format(event.getEventStart()) + "." + event.getVenue() + "." + timeFormat.format(event.getEventStart())
-				+ " - " + event.getName() + " - " + event.getId();
+				+ " - " + name + " - " + event.getId();
 	}
 }
