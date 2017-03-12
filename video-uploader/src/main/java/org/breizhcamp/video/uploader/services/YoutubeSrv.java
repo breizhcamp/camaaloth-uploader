@@ -96,7 +96,7 @@ public class YoutubeSrv {
 	 */
 	private Credential getCurrentCred() throws IOException {
 		Credential credential = ytAuthFlow.loadCredential("user");
-		if (credential.getExpiresInSeconds() == null || credential.getExpiresInSeconds() < 10) {
+		if (credential == null || credential.getExpiresInSeconds() == null || credential.getExpiresInSeconds() < 10) {
 			return null;
 		}
 		return credential;
