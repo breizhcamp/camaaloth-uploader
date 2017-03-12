@@ -1,0 +1,47 @@
+buildscript {
+	ext {
+		springBootVersion = '1.5.1.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+
+jar {
+	baseName = 'video-uploader'
+	version = '0.0.1-SNAPSHOT'
+}
+
+sourceCompatibility = 1.8
+
+repositories {
+	mavenCentral()
+}
+
+ext['thymeleaf.version'] = '3.0.2.RELEASE'
+ext['thymeleaf-layout-dialect.version'] = '2.1.1'
+
+dependencies {
+	compile('org.springframework.boot:spring-boot-starter-web')
+    compile('org.springframework.boot:spring-boot-starter-thymeleaf')
+	compile('org.springframework.boot:spring-boot-starter-websocket')
+	compile('com.fasterxml.jackson.datatype:jackson-datatype-jsr310')
+
+    compile('org.webjars:bootstrap:3.3.7-1')
+    compile('org.webjars:sockjs-client:1.1.2')
+    compile('org.webjars:stomp-websocket:2.3.3-1')
+
+	compile('com.google.apis:google-api-services-youtube:v3-rev182-1.22.0')
+
+	runtime('org.springframework.boot:spring-boot-devtools')
+	compileOnly('org.projectlombok:lombok')
+
+	testCompile('org.springframework.boot:spring-boot-starter-test')
+}

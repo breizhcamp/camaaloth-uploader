@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<title>Video uploader</title>
+	<link href="/webjars/bootstrap/3.3.7-1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container">
+	<div class="row">
+		<div class="col-md-12">
+			<h1>BreizhCamp Video Uploader</h1>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-md-6">
+			<h3>Local</h3>
+			Répertoire des vidéos : <strong th:text="${videosDir}"></strong>
+			<form method="post" th:action="@{/createDir}">
+				<button th:if="${!dirExists}" type="submit" class="btn btn-primary">Créer le répertoire</button>
+				<button th:if="${dirExists}" type="submit" class="btn btn-default">Recréer les répertoires des sessions</button>
+			</form>
+		</div>
+
+		<!-- *******************************************   YOUTUBE   ******************************************************** -->
+		<div class="col-md-6">
+			<h3>
+				YouTube
+				<a th:if="${connected}" th:href="@{'/yt/reload'}" title="Recharger les infos de l'utilisateur connecté" class="btn btn-default btn-sm">
+					<span class="glyphicon glyphicon-refresh"></span>
+				</a>
+			</h3>
+
+			<div th:if="${!connected}">
+				<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-primary">S'authentifier sur YouTube</a>
+			</div>
+
+			<div th:if="${connected}">
+				<div th:if="${ytSession.curChan}" class="media">
+					<div class="media-left">
+						<img th:src="${ytSession.curChan.snippet.thumbnails.default.url}" style="width: 50px; height: 50px">
+					</div>
+
+					<div class="media-body">
+						<h4 class="media-heading" th:text="${ytSession.curChan.snippet.title}"></h4>
+
+						<form method="post" th:action="@{/yt/curPlaylist}" class="form-inline" id="form-playlist">
+							<div class="form-group">
+								<label for="select-playlist">Playlist</label>
+								<select id="select-playlist" name="playlist">
+									<option value="none">Aucune</option>
+									<option th:each="p : ${ytSession.playlists}"
+											th:value="${p.id}" th:text="${p.snippet.title}"
+											th:selected="${ytSession.curPlaylist != null && p.id == ytSession.curPlaylist.id}"></option>
+								</select>
+							</div>
+						</form>
+					</div>
+
+					<div class="media-right">
+						<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-default">
+							<span class="glyphicon glyphicon-user"></span> Changer de compte
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- *******************************************   VIDEO LIST   ******************************************************** -->
+	<div class="row">
+		<div class="col-md-12">
+			<h3>Vidéos</h3>
+			<table class="table">
+				<thead>
+				<tr>
+					<th>Nom répertoire</th>
+					<th style="width: 200px">État</th>
+				</tr>
+				</thead>
+				<tbody>
+				<tr th:each="video : ${videos}">
+					<td th:text="${video.path.parent.fileName}"></td>
+					<td>
+						<span th:switch="${video.status.name()}">
+							<span th:case="'NOT_STARTED'">En attente</span>
+							<span th:case="'DONE'">Terminé</span>
+							<div th:case="'IN_PROGRESS'" class="progress">
+							  <div class="progress-bar" role="progressbar" th:style="${'min-width: 2em; width: ' + video.progression + '%;'}" th:text="${video.progression + '%'}">60%</div>
+							</div>
+						</span>
+					</td>
+				</tr>
+
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+</div>
+
+<script src="/webjars/jquery/1.11.1/jquery.min.js"></script>
+<script src="/webjars/bootstrap/3.3.7-1/js/bootstrap.min.js"></script>
+<script src="/webjars/sockjs-client/1.1.2/sockjs.min.js"></script>
+<script src="/webjars/stomp-websocket/2.3.3-1/stomp.min.js"></script>
+<script th:src="@{'/js/index.js'}"></script>
+</body>
+</html>
