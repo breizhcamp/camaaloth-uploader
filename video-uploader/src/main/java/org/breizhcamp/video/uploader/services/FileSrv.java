@@ -45,6 +45,20 @@ public class FileSrv {
 		}
 	}
 
+	/**
+	 * Retrieve event id from it's path name
+	 * @param path Path to retrieve id from
+	 * @return Id of the event, null if not found
+	 */
+	public String getIdFromPath(String path) {
+		int dash = path.lastIndexOf('-');
+		if (dash < 0) {
+			return null;
+		}
+
+		return path.substring(dash + 2);
+	}
+
 
 	/**
 	 * @return the directory name for a specific event

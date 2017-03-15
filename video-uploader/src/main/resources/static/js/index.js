@@ -15,6 +15,14 @@ $(function() {
 	stompClient.connect({}, function() {
 		stompClient.subscribe("/upload", function(msg) {
 			console.log(msg);
+			if (msg.command == "MESSAGE" && msg.body) {
+				var body = JSON.parse(msg.body);
+
+				if (body.eventId) {
+					var progress = body.percent/10 + '%';
+					$('#progress-' + body.eventId).width(progress).text(progress);
+				}
+			}
 		});
 	});
 });

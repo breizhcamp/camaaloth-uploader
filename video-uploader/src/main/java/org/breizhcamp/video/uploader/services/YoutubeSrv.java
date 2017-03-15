@@ -11,7 +11,10 @@ import com.google.api.services.youtube.model.ChannelListResponse;
 import com.google.api.services.youtube.model.Playlist;
 import com.google.api.services.youtube.model.PlaylistListResponse;
 import org.breizhcamp.video.uploader.config.YoutubeConfig;
+import org.breizhcamp.video.uploader.dto.Event;
+import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -32,6 +35,9 @@ public class YoutubeSrv {
 
 	@Autowired
 	private JacksonFactory jacksonFactory;
+
+	@Autowired
+	private SimpMessagingTemplate template;
 
 	private YouTube ytCache;
 
@@ -72,6 +78,16 @@ public class YoutubeSrv {
 				.playlists().list("id,snippet").setChannelId(channelId).setMaxResults(50L)
 				.execute();
 		return response.getItems();
+	}
+
+	/**
+	 * Upload a video
+	 * @param event Event describing the video
+	 * @param videoInfo File path of the video to upload
+	 */
+	public void upload(Event event, VideoInfo videoInfo) {
+		System.out.println(event);
+		System.out.println(videoInfo);
 	}
 
 

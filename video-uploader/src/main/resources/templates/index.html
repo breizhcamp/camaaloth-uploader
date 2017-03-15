@@ -80,20 +80,30 @@
 				<thead>
 				<tr>
 					<th>Nom répertoire</th>
-					<th style="width: 200px">État</th>
+					<th style="width: 180px">État</th>
+					<th style="width: 50px;"></th>
 				</tr>
 				</thead>
 				<tbody>
-				<tr th:each="video : ${videos}">
-					<td th:text="${video.path.parent.fileName}"></td>
+				<tr th:each="videoInfo : ${videos}">
+					<td th:text="${videoInfo.path.parent.fileName}"></td>
 					<td>
-						<span th:switch="${video.status.name()}">
+						<span th:switch="${videoInfo.status.name()}">
 							<span th:case="'NOT_STARTED'">En attente</span>
 							<span th:case="'DONE'">Terminé</span>
 							<div th:case="'IN_PROGRESS'" class="progress">
-							  <div class="progress-bar" role="progressbar" th:style="${'min-width: 2em; width: ' + video.progression + '%;'}" th:text="${video.progression + '%'}">60%</div>
+							  <div class="progress-bar" role="progressbar" th:id="${'progress-' + videoInfo.eventId}"
+								   th:style="${'min-width: 2em; width: ' + videoInfo.progression/10 + '%;'}" th:text="${videoInfo.progression/10 + '%'}">60%</div>
 							</div>
 						</span>
+					</td>
+					<td>
+						<form th:if="${videoInfo.status.name()} == 'NOT_STARTED'" th:action="@{'/yt/upload'}" method="post">
+							<input type="hidden" name="path" th:value="${videoInfo.path.parent.fileName}">
+							<button type="submit" title="Uploader sur YouTube" class="btn btn-success">
+								<span class="glyphicon glyphicon-cloud-upload"></span>
+							</button>
+						</form>
 					</td>
 				</tr>
 

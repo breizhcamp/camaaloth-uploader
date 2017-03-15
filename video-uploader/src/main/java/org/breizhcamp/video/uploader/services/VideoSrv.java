@@ -1,6 +1,6 @@
 package org.breizhcamp.video.uploader.services;
 
-import org.breizhcamp.video.uploader.dto.Video;
+import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -24,9 +23,9 @@ public class VideoSrv {
 
 	/**
 	 * List all videos found in video directory
-	 * @return Video found and status
+	 * @return VideoInfo found and status
 	 */
-	public List<Video> list() throws IOException {
+	public List<VideoInfo> list() throws IOException {
 		Path dir = fileSrv.getVideosDir();
 
 		try (Stream<Path> list = Files.list(dir)) {
@@ -41,23 +40,15 @@ public class VideoSrv {
 	/**
 	 * Read a directory and create the associate video object
 	 * @param dir Directory to read
-	 * @return Video object filled or null if directory empty
+	 * @return VideoInfo object filled or null if directory empty
 	 */
-	private Video readDir(Path dir) {
+	public VideoInfo readDir(Path dir) {
 		//retrieving first video file
-		Path videoFile;
 		try (Stream<Path> list = Files.list(dir)) {
-			Optional<Path> video = list.filter(f -> f.toString().toLowerCase().endsWith(".mp4"))
-					.findFirst();
+			Path videoFile = list.filter(f -> f.toString().toLowerCase().endsWith(".mp4")).findFirst().orElseGet(null);
+			//TODO: get thumbnail
 
-			if (video.isPresent()) {
-				videoFile = video.get();
-			} else {
-				return null;
-			}
-
-
-			Video.Status status = Video.Status.NOT_STARTED;
+			VideoInfo.Status status = VideoInfo.Status.NOT_STARTED;
 			BigDecimal progress = null;
 			Path statusFile = dir.resolve("status.txt");
 			if (Files.exists(statusFile)) {
@@ -65,16 +56,18 @@ public class VideoSrv {
 				if (!lines.isEmpty()) {
 					String line = lines.get(0).trim();
 					if (line.equals("done")) {
-						status = Video.Status.DONE;
+						status = VideoInfo.Status.DONE;
 					} else {
-						status = Video.Status.IN_PROGRESS;
+						status = VideoInfo.Status.IN_PROGRESS;
 						progress = new BigDecimal(line);
 					}
 				}
 			}
 
-			return Video.builder()
+			return VideoInfo.builder()
 					.path(videoFile)
+					.thumbnail(thumbnail)
+					.eventId(fileSrv.getIdFromPath(dir.getFileName().toString()))
 					.status(status)
 					.progression(progress)
 					.build();
