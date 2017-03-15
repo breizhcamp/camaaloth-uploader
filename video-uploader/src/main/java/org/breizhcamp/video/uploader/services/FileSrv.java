@@ -51,8 +51,10 @@ public class FileSrv {
 	 */
 	private String buildDirName(Event event) {
 		String name = event.getName().replaceAll("[\\\\/:*?\"<>|]", "-");
+		String speakers = event.getSpeakers().replaceAll("[\\\\/:*?\"<>|]", "-");
+		if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
 
 		return dayFormat.format(event.getEventStart()) + "." + event.getVenue() + "." + timeFormat.format(event.getEventStart())
-				+ " - " + name + " - " + event.getId();
+				+ " - " + name + " (" + speakers + ") - " + event.getId();
 	}
 }
