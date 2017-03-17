@@ -86,7 +86,7 @@
 				</thead>
 				<tbody>
 				<tr th:each="videoInfo : ${videos}">
-					<td th:text="${videoInfo.path.parent.fileName}"></td>
+					<td><span th:text="${videoInfo.path.parent.fileName}"></span> <span th:if="${videoInfo.thumbnail}" class="glyphicon glyphicon-picture"></span></td>
 					<td>
 						<span th:switch="${videoInfo.status.name()}">
 							<span th:case="'NOT_STARTED'">En attente</span>

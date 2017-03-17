@@ -40,13 +40,15 @@ public class VideoSrv {
 	/**
 	 * Read a directory and create the associate video object
 	 * @param dir Directory to read
-	 * @return VideoInfo object filled or null if directory empty
+	 * @return VideoInfo object filled or null if directory does not contains video file
 	 */
 	public VideoInfo readDir(Path dir) {
 		//retrieving first video file
-		try (Stream<Path> list = Files.list(dir)) {
-			Path videoFile = list.filter(f -> f.toString().toLowerCase().endsWith(".mp4")).findFirst().orElseGet(null);
-			//TODO: get thumbnail
+		try {
+			Path videoFile = getFirstFileFromExt(dir, "mp4");
+			if (videoFile == null) return null;
+
+			Path thumbnail = getFirstFileFromExt(dir, "png");
 
 			VideoInfo.Status status = VideoInfo.Status.NOT_STARTED;
 			BigDecimal progress = null;
@@ -72,6 +74,22 @@ public class VideoSrv {
 					.progression(progress)
 					.build();
 
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	/**
+	 * List a directory to retrieve the first file with the specified extension
+	 * @param dir Directory to read
+	 * @param ext Extension to find
+	 * @return First file found or null if any file with specified extension exists within the directory
+	 */
+	private Path getFirstFileFromExt(Path dir, String ext) {
+		String suffix = "." + ext;
+
+		try (Stream<Path> list = Files.list(dir)) {
+			return list.filter(f -> f.toString().toLowerCase().endsWith(suffix)).findFirst().orElse(null);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
