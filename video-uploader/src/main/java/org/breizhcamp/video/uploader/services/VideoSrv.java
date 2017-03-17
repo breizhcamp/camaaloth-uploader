@@ -80,6 +80,24 @@ public class VideoSrv {
 	}
 
 	/**
+	 * Define video state to "in progress" with its upload percent
+	 * @param videoDir Directory containing the video
+	 * @param percent Upload percentage
+	 */
+	public void setVideoProgress(Path videoDir, BigDecimal percent) {
+		//TODO
+	}
+
+	/**
+	 * Define video state to done with its id
+	 * @param videoDir Directory containing the video
+	 * @param videoId Id of the uploaded video
+	 */
+	public void setVideoDone(Path videoDir, String videoId) {
+		//TODO
+	}
+
+	/**
 	 * List a directory to retrieve the first file with the specified extension
 	 * @param dir Directory to read
 	 * @param ext Extension to find

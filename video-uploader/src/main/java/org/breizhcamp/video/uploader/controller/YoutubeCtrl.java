@@ -95,7 +95,7 @@ public class YoutubeCtrl {
 	}
 
 	@PostMapping("/upload")
-	public String uploadVideo(@RequestParam String path) throws IOException {
+	public String uploadVideo(@RequestParam String path) throws IOException, GeneralSecurityException {
 		String id = fileSrv.getIdFromPath(path);
 		if (id != null) {
 			Event event = eventSrv.getFromId(id);
