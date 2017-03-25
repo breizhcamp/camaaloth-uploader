@@ -80,6 +80,14 @@ public class VideoSrv {
 	}
 
 	/**
+	 * Update video status in metadata
+	 * @param video Video to update
+	 */
+	public void updateVideo(VideoInfo video) {
+		//TODO
+	}
+
+	/**
 	 * Define video state to "in progress" with its upload percent
 	 * @param videoDir Directory containing the video
 	 * @param percent Upload percentage

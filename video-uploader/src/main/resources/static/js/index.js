@@ -5,24 +5,37 @@ $(function() {
 	$('#select-playlist').on('change', function () {
 		$('#form-playlist').submit();
 	});
+});
 
-
-
+angular.module('videosApp', [])
+.controller('VideoListCtrl', function($scope) {
 	// -----       WebSockets     ------
 	var socket = new SockJS("/stomp");
 	var stompClient = Stomp.over(socket);
 
 	stompClient.connect({}, function() {
-		stompClient.subscribe("/upload", function(msg) {
-			console.log(msg);
+
+		stompClient.subscribe("/videos", function(msg) {
 			if (msg.command == "MESSAGE" && msg.body) {
 				var body = JSON.parse(msg.body);
 
-				if (body.eventId) {
-					var progress = body.percent/10 + '%';
-					$('#progress-' + body.eventId).width(progress).text(progress);
-				}
+				$scope.$apply(function() {
+					if (angular.isArray(body)) {
+							$scope.videos = body;
+							$scope.loaded = true;
+
+					} else if (body.eventId) {
+						for (var i = 0; i < $scope.videos.length; i++) {
+							var video = $scope.videos[i];
+							if (video.id == body.eventId) {
+								video.progression = body.progression;
+								video.status = body.status;
+							}
+						}
+					}
+				});
 			}
 		});
 	});
+
 });

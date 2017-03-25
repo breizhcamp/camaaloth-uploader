@@ -10,8 +10,8 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import org.breizhcamp.video.uploader.config.YoutubeConfig;
+import org.breizhcamp.video.uploader.controller.HomeCtrl;
 import org.breizhcamp.video.uploader.dto.Event;
-import org.breizhcamp.video.uploader.dto.UploadProgress;
 import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,8 +135,13 @@ public class YoutubeSrv {
 					double progress = httpUploader.getProgress();
 					logger.info("Upload in progress: " + progress);
 
-					template.convertAndSend("/upload", UploadProgress.builder().eventId(event.getId()).percent((int) (progress * 1000)).build());
-					videoSrv.setVideoProgress(videoInfo.getPath().getParent(), new BigDecimal(progress*100, new MathContext(2)));
+					BigDecimal percent = new BigDecimal(progress * 100, new MathContext(2));
+
+					videoInfo.setStatus(VideoInfo.Status.IN_PROGRESS);
+					videoInfo.setProgression(percent);
+
+					template.convertAndSend(HomeCtrl.VIDEOS_TOPIC, videoInfo);
+					videoSrv.updateVideo(videoInfo);
 					break;
 				case MEDIA_COMPLETE:
 					logger.info("Upload complete");

@@ -5,7 +5,6 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.Playlist;
 import org.breizhcamp.video.uploader.dto.Event;
-import org.breizhcamp.video.uploader.dto.UploadProgress;
 import org.breizhcamp.video.uploader.dto.YoutubeSession;
 import org.breizhcamp.video.uploader.services.EventSrv;
 import org.breizhcamp.video.uploader.services.FileSrv;
@@ -14,7 +13,10 @@ import org.breizhcamp.video.uploader.services.YoutubeSrv;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -105,10 +107,4 @@ public class YoutubeCtrl {
 		return "redirect:/";
 	}
 
-	@GetMapping("/test")
-	@ResponseBody
-	public String test() {
-		template.convertAndSend("/upload", UploadProgress.builder().eventId("928").percent(254).build());
-		return "sent";
-	}
 }
