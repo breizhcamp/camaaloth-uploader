@@ -4,6 +4,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.Playlist;
+import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.breizhcamp.video.uploader.dto.YoutubeSession;
 import org.breizhcamp.video.uploader.exception.UpdateException;
 import org.breizhcamp.video.uploader.services.FileSrv;
@@ -93,7 +94,9 @@ public class YoutubeCtrl {
 	public String uploadVideo(@RequestParam String path) throws IOException, GeneralSecurityException, UpdateException {
 		String id = fileSrv.getIdFromPath(path);
 		if (id != null) {
-			youtubeSrv.upload(videoSrv.readDir(fileSrv.getVideosDir().resolve(path)));
+			VideoInfo videoInfo = videoSrv.readDir(fileSrv.getVideosDir().resolve(path));
+			videoInfo.setPlaylistId(ytSession.getCurPlaylist().getId());
+			youtubeSrv.upload(videoInfo);
 		}
 
 		return "redirect:/";

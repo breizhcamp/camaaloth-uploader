@@ -30,6 +30,7 @@ angular.module('videosApp', [])
 							if (video.eventId == body.eventId) {
 								video.progression = body.progression;
 								video.status = body.status;
+								video.youtubeId = body.youtubeId;
 							}
 						}
 					}

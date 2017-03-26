@@ -30,6 +30,9 @@ public class VideoInfo {
 	private String youtubeId;
 	private BigDecimal progression;
 
+	/** Id of the playlist the video is inserted into after the upload */
+	private String playlistId;
+
 	/**
 	 * @return The name of the directory the videos is
 	 */

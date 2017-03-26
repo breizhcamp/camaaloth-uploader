@@ -17,7 +17,7 @@ import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 
-import static com.google.api.services.youtube.YouTubeScopes.YOUTUBE_READONLY;
+import static com.google.api.services.youtube.YouTubeScopes.YOUTUBE;
 import static com.google.api.services.youtube.YouTubeScopes.YOUTUBE_UPLOAD;
 
 /**
@@ -50,7 +50,7 @@ public class YoutubeConfig {
 				new InputStreamReader(YoutubeConfig.class.getResourceAsStream("/oauth-google.json")));
 
 		return new GoogleAuthorizationCodeFlow
-				.Builder(httpTransport(), jacksonFactory(), secrets, Arrays.asList(YOUTUBE_UPLOAD, YOUTUBE_READONLY))
+				.Builder(httpTransport(), jacksonFactory(), secrets, Arrays.asList(YOUTUBE_UPLOAD, YOUTUBE))
 				.setDataStoreFactory(dataStoreFactory)
 				.build();
 	}

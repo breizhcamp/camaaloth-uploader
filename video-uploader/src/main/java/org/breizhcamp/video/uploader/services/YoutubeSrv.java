@@ -211,22 +211,26 @@ public class YoutubeSrv {
 						try {
 							switch (httpUploader.getUploadState()) {
 								case NOT_STARTED:
-									logger.info("Not started");
+									logger.info("[{}] Not started", videoInfo.getEventId());
 									break;
 								case INITIATION_STARTED:
-									logger.info("Init started");
+									logger.info("[{}] Init started", videoInfo.getEventId());
 									videoInfo.setStatus(INITIALIZING);
 									updateVideo(videoInfo);
 
 									break;
 								case INITIATION_COMPLETE:
-									logger.info("Init complete");
+									logger.info("[{}] Init complete", videoInfo.getEventId());
+									videoInfo.setStatus(IN_PROGRESS);
+									videoInfo.setProgression(BigDecimal.ZERO);
+									updateVideo(videoInfo);
+
 									break;
 								case MEDIA_IN_PROGRESS:
 									double progress = httpUploader.getProgress();
-									logger.info("Upload in progress: " + progress);
+									logger.info("[{}] Upload in progress: [{}]", videoInfo.getEventId(), progress);
 
-									BigDecimal percent = new BigDecimal(progress * 100, new MathContext(2));
+									BigDecimal percent = new BigDecimal(progress * 100, new MathContext(3));
 
 									videoInfo.setStatus(IN_PROGRESS);
 									videoInfo.setProgression(percent);
@@ -234,7 +238,7 @@ public class YoutubeSrv {
 
 									break;
 								case MEDIA_COMPLETE:
-									logger.info("Upload complete");
+									logger.info("[{}] Upload complete", videoInfo.getEventId());
 									break;
 							}
 						} catch (UpdateException e) {
@@ -245,6 +249,8 @@ public class YoutubeSrv {
 
 					//this call is blocking until video is completely uploaded
 					Video insertedVideo = insert.execute();
+
+					insertInPlaylist(insertedVideo.getId(), videoInfo.getPlaylistId());
 
 					videoInfo.setStatus(DONE);
 					videoInfo.setProgression(null);
@@ -260,6 +266,23 @@ public class YoutubeSrv {
 				//TODO handling this error more smart in avoid to crash upload thread
 				logger.error("Error when uploading [{}]", lastUpload, e);
 			}
+		}
+
+		private void insertInPlaylist(String youtubeId, String playlistId) throws GeneralSecurityException, IOException {
+			if (playlistId == null) return;
+
+			PlaylistItem item = new PlaylistItem();
+			PlaylistItemSnippet snippet = new PlaylistItemSnippet();
+			item.setSnippet(snippet);
+			snippet.setPlaylistId(playlistId);
+
+			ResourceId resourceId = new ResourceId();
+			resourceId.setVideoId(youtubeId);
+			resourceId.setKind("youtube#video");
+
+			snippet.setResourceId(resourceId);
+
+			getYoutube().playlistItems().insert("snippet,status", item).execute();
 		}
 
 		void shutdown() {
