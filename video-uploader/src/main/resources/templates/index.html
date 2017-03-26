@@ -52,7 +52,7 @@
 						<form method="post" th:action="@{/yt/curPlaylist}" class="form-inline" id="form-playlist">
 							<div class="form-group">
 								<label for="select-playlist">Playlist</label>
-								<select id="select-playlist" name="playlist">
+								<select id="select-playlist" name="playlist" class="form-control">
 									<option value="none">Aucune</option>
 									<option th:each="p : ${ytSession.playlists}"
 											th:value="${p.id}" th:text="${p.snippet.title}"
@@ -98,6 +98,7 @@
 								   style="min-width: 3em; width: {{video.progression}}%">{{video.progression}}%</div>
 							</div>
 
+							<span ng-switch-when="THUMBNAIL">Miniature</span>
 							<span ng-switch-when="DONE">Terminé</span>
 						</span>
 					</td>

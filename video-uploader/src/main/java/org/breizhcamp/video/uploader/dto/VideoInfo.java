@@ -20,6 +20,7 @@ public class VideoInfo {
 		/** In upload queue */ WAITING,
 		/** Initializing upload */ INITIALIZING,
 		/** Upload in progress, progression should be populated */ IN_PROGRESS,
+		/** Setting thumbnail in progress */ THUMBNAIL,
 		/** Upload done, youtubeId should be set */ DONE }
 
 

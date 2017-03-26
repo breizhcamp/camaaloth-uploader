@@ -238,7 +238,7 @@ public class YoutubeSrv {
 
 									break;
 								case MEDIA_COMPLETE:
-									logger.info("[{}] Upload complete", videoInfo.getEventId());
+									logger.info("[{}] Upload video file complete", videoInfo.getEventId());
 									break;
 							}
 						} catch (UpdateException e) {
@@ -249,15 +249,22 @@ public class YoutubeSrv {
 
 					//this call is blocking until video is completely uploaded
 					Video insertedVideo = insert.execute();
-
-					insertInPlaylist(insertedVideo.getId(), videoInfo.getPlaylistId());
-
-					videoInfo.setStatus(DONE);
-					videoInfo.setProgression(null);
 					videoInfo.setYoutubeId(insertedVideo.getId());
+
+					insertInPlaylist(videoInfo);
+
+					videoInfo.setStatus(videoInfo.getThumbnail() == null ? DONE : THUMBNAIL);
+					videoInfo.setProgression(null);
 					updateVideo(videoInfo);
 
-					//TODO upload thumbnail if available
+					//upload thumbnail if available
+					if (videoInfo.getThumbnail() != null) {
+						uploadThumbnail(videoInfo);
+						videoInfo.setStatus(DONE);
+						updateVideo(videoInfo);
+					}
+
+					logger.info("[{}] Video uploaded, end of process", videoInfo.getEventId());
 				}
 
 			} catch (InterruptedException e) {
@@ -268,8 +275,10 @@ public class YoutubeSrv {
 			}
 		}
 
-		private void insertInPlaylist(String youtubeId, String playlistId) throws GeneralSecurityException, IOException {
+		private void insertInPlaylist(VideoInfo videoInfo) throws GeneralSecurityException, IOException {
+			String playlistId = videoInfo.getPlaylistId();
 			if (playlistId == null) return;
+			logger.info("[{}] Setting video in playlist [{}]", videoInfo.getEventId(), playlistId);
 
 			PlaylistItem item = new PlaylistItem();
 			PlaylistItemSnippet snippet = new PlaylistItemSnippet();
@@ -277,12 +286,20 @@ public class YoutubeSrv {
 			snippet.setPlaylistId(playlistId);
 
 			ResourceId resourceId = new ResourceId();
-			resourceId.setVideoId(youtubeId);
+			resourceId.setVideoId(videoInfo.getYoutubeId());
 			resourceId.setKind("youtube#video");
 
 			snippet.setResourceId(resourceId);
 
 			getYoutube().playlistItems().insert("snippet,status", item).execute();
+			logger.info("[{}] Video set in playlist", videoInfo.getEventId());
+		}
+
+		private void uploadThumbnail(VideoInfo videoInfo) throws GeneralSecurityException, IOException {
+			logger.info("[{}] Uploading and defining thumbnail [{}]", videoInfo.getEventId(), videoInfo.getThumbnail());
+			FileContent thumb = new FileContent("image/png", videoInfo.getThumbnail().toFile());
+			getYoutube().thumbnails().set(videoInfo.getYoutubeId(), thumb).execute();
+			logger.info("[{}] Thumbnail set", videoInfo.getEventId());
 		}
 
 		void shutdown() {
