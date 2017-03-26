@@ -13,9 +13,11 @@ import org.breizhcamp.video.uploader.config.YoutubeConfig;
 import org.breizhcamp.video.uploader.controller.HomeCtrl;
 import org.breizhcamp.video.uploader.dto.Event;
 import org.breizhcamp.video.uploader.dto.VideoInfo;
+import org.breizhcamp.video.uploader.exception.UpdateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -114,7 +116,7 @@ public class YoutubeSrv {
 	 * Upload a video
 	 * @param videoInfo Video to upload
 	 */
-	public void upload(VideoInfo videoInfo) {
+	public void upload(VideoInfo videoInfo) throws UpdateException {
 		uploader.uploadVideo(videoInfo);
 	}
 
@@ -163,7 +165,7 @@ public class YoutubeSrv {
 			super("YtUploader");
 		}
 
-		public void uploadVideo(VideoInfo videoInfo) {
+		public void uploadVideo(VideoInfo videoInfo) throws UpdateException {
 			videoToUpload.addLast(videoInfo);
 			videoInfo.setStatus(WAITING);
 			updateVideo(videoInfo);
@@ -194,7 +196,7 @@ public class YoutubeSrv {
 					VideoSnippet snippet = new VideoSnippet();
 					video.setSnippet(snippet);
 					snippet.setTitle(event.getName());
-					snippet.setDescription("par " + speakers + "\n\n" + event.getDescription()); //TODO check markdown formatting
+					snippet.setDescription(event.getDescription() + "\n\n" + "Par " + speakers); //TODO check markdown formatting
 
 					FileContent videoContent = new FileContent("video/*", videoInfo.getPath().toFile());
 
@@ -206,33 +208,38 @@ public class YoutubeSrv {
 					uploader.setChunkSize(1024 * 1024); //1MB in order to have progress info often
 
 					uploader.setProgressListener(httpUploader -> {
-						switch (httpUploader.getUploadState()) {
-							case NOT_STARTED:
-								logger.info("Not started");
-								break;
-							case INITIATION_STARTED:
-								logger.info("Init started");
-								videoInfo.setStatus(INITIALIZING);
-								updateVideo(videoInfo);
+						try {
+							switch (httpUploader.getUploadState()) {
+								case NOT_STARTED:
+									logger.info("Not started");
+									break;
+								case INITIATION_STARTED:
+									logger.info("Init started");
+									videoInfo.setStatus(INITIALIZING);
+									updateVideo(videoInfo);
 
-								break;
-							case INITIATION_COMPLETE:
-								logger.info("Init complete");
-								break;
-							case MEDIA_IN_PROGRESS:
-								double progress = httpUploader.getProgress();
-								logger.info("Upload in progress: " + progress);
+									break;
+								case INITIATION_COMPLETE:
+									logger.info("Init complete");
+									break;
+								case MEDIA_IN_PROGRESS:
+									double progress = httpUploader.getProgress();
+									logger.info("Upload in progress: " + progress);
 
-								BigDecimal percent = new BigDecimal(progress * 100, new MathContext(2));
+									BigDecimal percent = new BigDecimal(progress * 100, new MathContext(2));
 
-								videoInfo.setStatus(IN_PROGRESS);
-								videoInfo.setProgression(percent);
-								updateVideo(videoInfo);
+									videoInfo.setStatus(IN_PROGRESS);
+									videoInfo.setProgression(percent);
+									updateVideo(videoInfo);
 
-								break;
-							case MEDIA_COMPLETE:
-								logger.info("Upload complete");
-								break;
+									break;
+								case MEDIA_COMPLETE:
+									logger.info("Upload complete");
+									break;
+							}
+						} catch (UpdateException e) {
+							//not a critical exception, let the upload continue
+							logger.warn("Cannot send or write update for video [{}]", videoInfo.getDirName(), e);
 						}
 					});
 
@@ -240,6 +247,7 @@ public class YoutubeSrv {
 					Video insertedVideo = insert.execute();
 
 					videoInfo.setStatus(DONE);
+					videoInfo.setProgression(null);
 					videoInfo.setYoutubeId(insertedVideo.getId());
 					updateVideo(videoInfo);
 
@@ -248,7 +256,7 @@ public class YoutubeSrv {
 
 			} catch (InterruptedException e) {
 				running = false;
-			} catch (GeneralSecurityException | IOException e) {
+			} catch (GeneralSecurityException | IOException | UpdateException e) {
 				//TODO handling this error more smart in avoid to crash upload thread
 				logger.error("Error when uploading [{}]", lastUpload, e);
 			}
@@ -262,9 +270,13 @@ public class YoutubeSrv {
 			return videoToUpload.stream().collect(Collectors.toList());
 		}
 
-		private void updateVideo(VideoInfo video) {
-			template.convertAndSend(HomeCtrl.VIDEOS_TOPIC, video);
-			videoSrv.updateVideo(video);
+		private void updateVideo(VideoInfo video) throws UpdateException {
+			try {
+				template.convertAndSend(HomeCtrl.VIDEOS_TOPIC, video);
+				videoSrv.updateVideo(video);
+			} catch (MessagingException | IOException e) {
+				throw new UpdateException(e);
+			}
 		}
 	}
 }

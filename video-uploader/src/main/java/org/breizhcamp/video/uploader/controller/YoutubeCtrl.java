@@ -5,6 +5,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.Playlist;
 import org.breizhcamp.video.uploader.dto.YoutubeSession;
+import org.breizhcamp.video.uploader.exception.UpdateException;
 import org.breizhcamp.video.uploader.services.FileSrv;
 import org.breizhcamp.video.uploader.services.VideoSrv;
 import org.breizhcamp.video.uploader.services.YoutubeSrv;
@@ -89,7 +90,7 @@ public class YoutubeCtrl {
 
 	//TODO handle upload in websocket
 	@PostMapping("/upload")
-	public String uploadVideo(@RequestParam String path) throws IOException, GeneralSecurityException {
+	public String uploadVideo(@RequestParam String path) throws IOException, GeneralSecurityException, UpdateException {
 		String id = fileSrv.getIdFromPath(path);
 		if (id != null) {
 			youtubeSrv.upload(videoSrv.readDir(fileSrv.getVideosDir().resolve(path)));

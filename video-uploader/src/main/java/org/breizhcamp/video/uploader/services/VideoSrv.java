@@ -1,25 +1,31 @@
 package org.breizhcamp.video.uploader.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.breizhcamp.video.uploader.dto.VideoInfo;
+import org.breizhcamp.video.uploader.dto.VideoMetadata;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
+import static org.breizhcamp.video.uploader.dto.VideoInfo.Status.NOT_STARTED;
 
 @Service
 public class VideoSrv {
 
 	@Autowired
 	private FileSrv fileSrv;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	/**
 	 * List all videos found in video directory
@@ -45,34 +51,27 @@ public class VideoSrv {
 	public VideoInfo readDir(Path dir) {
 		//retrieving first video file
 		try {
-			Path videoFile = getFirstFileFromExt(dir, "mp4");
+			Path videoFile = getFirstFileFromExt(dir, "mp4", "mkv");
 			if (videoFile == null) return null;
 
 			Path thumbnail = getFirstFileFromExt(dir, "png");
 
-			VideoInfo.Status status = VideoInfo.Status.NOT_STARTED;
-			BigDecimal progress = null;
-			Path statusFile = dir.resolve("status.txt");
-			if (Files.exists(statusFile)) {
-				List<String> lines = Files.readAllLines(statusFile);
-				if (!lines.isEmpty()) {
-					String line = lines.get(0).trim();
-					if (line.equals("done")) {
-						status = VideoInfo.Status.DONE;
-					} else {
-						status = VideoInfo.Status.IN_PROGRESS;
-						progress = new BigDecimal(line);
-					}
-				}
-			}
-
-			return VideoInfo.builder()
+			VideoInfo videoInfo = VideoInfo.builder()
 					.path(videoFile)
+					.status(NOT_STARTED)
 					.thumbnail(thumbnail)
 					.eventId(fileSrv.getIdFromPath(dir.getFileName().toString()))
-					.status(status)
-					.progression(progress)
 					.build();
+
+			Path statusFile = dir.resolve("metadata.json");
+			if (Files.exists(statusFile)) {
+				VideoMetadata metadata = objectMapper.readValue(statusFile.toFile(), VideoMetadata.class);
+				videoInfo.setStatus(metadata.getStatus());
+				videoInfo.setProgression(metadata.getProgression());
+				videoInfo.setYoutubeId(metadata.getYoutubeId());
+			}
+
+			return videoInfo;
 
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
@@ -83,8 +82,15 @@ public class VideoSrv {
 	 * Update video status in metadata
 	 * @param video Video to update
 	 */
-	public void updateVideo(VideoInfo video) {
-		//TODO
+	public void updateVideo(VideoInfo video) throws IOException {
+		VideoMetadata metadata = VideoMetadata.builder()
+				.status(video.getStatus())
+				.progression(video.getProgression())
+				.youtubeId(video.getYoutubeId())
+				.build();
+
+		Path statusFile = video.getPath().getParent().resolve("metadata.json");
+		objectMapper.writeValue(statusFile.toFile(), metadata);
 	}
 
 	/**
@@ -93,11 +99,15 @@ public class VideoSrv {
 	 * @param ext Extension to find
 	 * @return First file found or null if any file with specified extension exists within the directory
 	 */
-	private Path getFirstFileFromExt(Path dir, String ext) {
-		String suffix = "." + ext;
+	private Path getFirstFileFromExt(Path dir, String... ext) {
+		List<String> suffixes = Arrays.stream(ext).map(e -> "." + e).collect(toList());
 
 		try (Stream<Path> list = Files.list(dir)) {
-			return list.filter(f -> f.toString().toLowerCase().endsWith(suffix)).findFirst().orElse(null);
+			return list
+					.filter(f -> suffixes.stream().anyMatch((suffix) -> f.toString().toLowerCase().endsWith(suffix)))
+					.findFirst()
+					.orElse(null);
+
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

@@ -1,5 +1,6 @@
 package org.breizhcamp.video.uploader.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
  * VideoInfo file location and status
  */
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class VideoInfo {
 	public enum Status {
 		NOT_STARTED,

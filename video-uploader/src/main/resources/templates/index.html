@@ -94,7 +94,7 @@
 							<span ng-switch-when="INITIALIZING">Initialisation</span>
 
 							<div ng-switch-when="IN_PROGRESS" class="progress">
-							  <div class="progress-bar" role="progressbar"
+							  <div class="progress-bar progress-bar-striped active" role="progressbar"
 								   style="min-width: 2em; width: {{video.progression}}%">{{video.progression}}%</div>
 							</div>
 
@@ -108,6 +108,10 @@
 								<span class="glyphicon glyphicon-cloud-upload"></span>
 							</button>
 						</form>
+
+						<a ng-show="video.youtubeId" ng-href="https://www.youtube.com/watch?v={{video.youtubeId}}" class="btn btn-primary" target="_blank">
+							<span class="glyphicon glyphicon-film"></span>
+						</a>
 					</td>
 				</tr>
 
