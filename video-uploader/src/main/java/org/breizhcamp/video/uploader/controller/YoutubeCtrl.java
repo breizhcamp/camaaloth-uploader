@@ -4,14 +4,11 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.Playlist;
-import org.breizhcamp.video.uploader.dto.Event;
 import org.breizhcamp.video.uploader.dto.YoutubeSession;
-import org.breizhcamp.video.uploader.services.EventSrv;
 import org.breizhcamp.video.uploader.services.FileSrv;
 import org.breizhcamp.video.uploader.services.VideoSrv;
 import org.breizhcamp.video.uploader.services.YoutubeSrv;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,9 +32,6 @@ public class YoutubeCtrl {
 	private FileSrv fileSrv;
 
 	@Autowired
-	private EventSrv eventSrv;
-
-	@Autowired
 	private VideoSrv videoSrv;
 
 	@Autowired
@@ -45,9 +39,6 @@ public class YoutubeCtrl {
 
 	@Autowired
 	private GoogleAuthorizationCodeFlow ytAuthFlow;
-
-	@Autowired
-	private SimpMessagingTemplate template;
 
 	private String redirectUrl;
 
@@ -96,12 +87,12 @@ public class YoutubeCtrl {
 		return "redirect:/";
 	}
 
+	//TODO handle upload in websocket
 	@PostMapping("/upload")
 	public String uploadVideo(@RequestParam String path) throws IOException, GeneralSecurityException {
 		String id = fileSrv.getIdFromPath(path);
 		if (id != null) {
-			Event event = eventSrv.getFromId(id);
-			youtubeSrv.upload(event, videoSrv.readDir(fileSrv.getVideosDir().resolve(path)));
+			youtubeSrv.upload(videoSrv.readDir(fileSrv.getVideosDir().resolve(path)));
 		}
 
 		return "redirect:/";

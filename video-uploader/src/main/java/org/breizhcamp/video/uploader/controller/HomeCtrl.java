@@ -16,7 +16,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
-import java.util.List;
+import java.util.Collection;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Controller
 public class HomeCtrl {
@@ -40,7 +43,6 @@ public class HomeCtrl {
 
 		model.addAttribute("videosDir", videosDir);
 		model.addAttribute("dirExists", Files.isDirectory(videosDir));
-		model.addAttribute("videos", videoSrv.list());
 
 		boolean connected = youtubeSrv.isConnected();
 		model.addAttribute("connected", connected);
@@ -50,8 +52,14 @@ public class HomeCtrl {
 	}
 
 	@SubscribeMapping(VIDEOS_TOPIC)
-	public List<VideoInfo> subscribe() throws IOException {
-		return videoSrv.list();
+	public Collection<VideoInfo> subscribe() throws IOException {
+		Map<String, VideoInfo> videoById = videoSrv.list().stream().collect(Collectors.toMap(VideoInfo::getEventId, Function.identity()));
+
+		youtubeSrv.listWaiting().stream()
+			.map(VideoInfo::getEventId)
+			.forEach(id -> videoById.get(id).setStatus(VideoInfo.Status.WAITING));
+
+		return videoById.values();
 	}
 
 	@PostMapping("/createDir")

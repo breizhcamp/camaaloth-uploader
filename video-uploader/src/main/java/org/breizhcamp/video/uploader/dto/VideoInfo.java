@@ -13,7 +13,12 @@ import java.nio.file.Path;
  */
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class VideoInfo {
-	public enum Status { NOT_STARTED, IN_PROGRESS, DONE }
+	public enum Status {
+		NOT_STARTED,
+		/** In upload queue */ WAITING,
+		/** Initializing upload */ INITIALIZING,
+		/** Upload in progress, progression should be populated */ IN_PROGRESS,
+		/** Upload done, youtubeId should be set */ DONE }
 
 
 	private Path path;

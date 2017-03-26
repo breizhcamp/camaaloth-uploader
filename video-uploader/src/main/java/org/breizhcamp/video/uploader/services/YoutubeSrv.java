@@ -19,11 +19,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.stream.Collectors;
+
+import static org.breizhcamp.video.uploader.dto.VideoInfo.Status.*;
 
 /**
  * Youtube access service
@@ -34,6 +41,9 @@ public class YoutubeSrv {
 
 	@Autowired
 	private VideoSrv videoSrv;
+
+	@Autowired
+	private EventSrv eventSrv;
 
 	@Autowired
 	private GoogleAuthorizationCodeFlow ytAuthFlow;
@@ -49,6 +59,18 @@ public class YoutubeSrv {
 
 	private YouTube ytCache;
 
+	private YtUploader uploader;
+
+	@PostConstruct
+	public void setUp() {
+		uploader = new YtUploader();
+		uploader.start();
+	}
+
+	@PreDestroy
+	public void tearDown() {
+		if (uploader != null) uploader.shutdown();
+	}
 
 	/**
 	 * Check if user is connected and has valid credentials
@@ -90,69 +112,18 @@ public class YoutubeSrv {
 
 	/**
 	 * Upload a video
-	 * @param event Event describing the video
-	 * @param videoInfo File path of the video to upload
+	 * @param videoInfo Video to upload
 	 */
-	public void upload(Event event, VideoInfo videoInfo) throws IOException, GeneralSecurityException {
-		//TODO handle async / waiting list / threading
-		logger.info("Uploading video: [{}]", videoInfo.getPath());
-
-		YouTube youtube = getYoutube();
-
-		String speakers = event.getSpeakers();
-		if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
-
-		Video video = new Video();
-
-		VideoStatus videoStatus = new VideoStatus();
-		videoStatus.setPrivacyStatus("unlisted");
-		video.setStatus(videoStatus);
-
-		VideoSnippet snippet = new VideoSnippet();
-		video.setSnippet(snippet);
-		snippet.setTitle(event.getName());
-		snippet.setDescription("par " + speakers + "\n\n" + event.getDescription()); //TODO check markdown formatting
-
-		FileContent videoContent = new FileContent("video/*", videoInfo.getPath().toFile());
-
-		YouTube.Videos.Insert insert = youtube.videos().insert("snippet,status", video, videoContent);
-
-		MediaHttpUploader uploader = insert.getMediaHttpUploader();
-
-		//TODO send every state to gui
-		uploader.setProgressListener(httpUploader -> {
-			switch (httpUploader.getUploadState()) {
-				case NOT_STARTED:
-					logger.info("Not started");
-					break;
-				case INITIATION_STARTED:
-					logger.info("Init started");
-					break;
-				case INITIATION_COMPLETE:
-					logger.info("Init complete");
-					break;
-				case MEDIA_IN_PROGRESS:
-					double progress = httpUploader.getProgress();
-					logger.info("Upload in progress: " + progress);
-
-					BigDecimal percent = new BigDecimal(progress * 100, new MathContext(2));
-
-					videoInfo.setStatus(VideoInfo.Status.IN_PROGRESS);
-					videoInfo.setProgression(percent);
-
-					template.convertAndSend(HomeCtrl.VIDEOS_TOPIC, videoInfo);
-					videoSrv.updateVideo(videoInfo);
-					break;
-				case MEDIA_COMPLETE:
-					logger.info("Upload complete");
-					break;
-			}
-		});
-
-		Video insertedVideo = insert.execute();
-		videoSrv.setVideoDone(videoInfo.getPath().getParent(), insertedVideo.getId());
+	public void upload(VideoInfo videoInfo) {
+		uploader.uploadVideo(videoInfo);
 	}
 
+	/**
+	 * @return waiting video to upload
+	 */
+	public List<VideoInfo> listWaiting() {
+		return uploader.listWaiting();
+	}
 
 	private YouTube getYoutube() throws GeneralSecurityException, IOException {
 		Credential credential = getCurrentCred();
@@ -181,4 +152,119 @@ public class YoutubeSrv {
 		return credential;
 	}
 
+	/** Youtube uploader thread */
+	private class YtUploader extends Thread {
+		/** List of video to upload */
+		private BlockingDeque<VideoInfo> videoToUpload = new LinkedBlockingDeque<>();
+
+		private boolean running = true;
+
+		public YtUploader() {
+			super("YtUploader");
+		}
+
+		public void uploadVideo(VideoInfo videoInfo) {
+			videoToUpload.addLast(videoInfo);
+			videoInfo.setStatus(WAITING);
+			updateVideo(videoInfo);
+		}
+
+		@Override
+		public void run() {
+			String lastUpload = null;
+			try {
+				while (running) {
+					VideoInfo videoInfo = videoToUpload.take();
+					logger.info("Uploading video: [{}]", videoInfo.getPath());
+
+					lastUpload = videoInfo.getDirName();
+					Event event = eventSrv.getFromId(videoInfo.getEventId());
+
+					YouTube youtube = getYoutube();
+
+					String speakers = event.getSpeakers();
+					if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
+
+					Video video = new Video();
+
+					VideoStatus videoStatus = new VideoStatus();
+					videoStatus.setPrivacyStatus("unlisted");
+					video.setStatus(videoStatus);
+
+					VideoSnippet snippet = new VideoSnippet();
+					video.setSnippet(snippet);
+					snippet.setTitle(event.getName());
+					snippet.setDescription("par " + speakers + "\n\n" + event.getDescription()); //TODO check markdown formatting
+
+					FileContent videoContent = new FileContent("video/*", videoInfo.getPath().toFile());
+
+					YouTube.Videos.Insert insert = youtube.videos().insert("snippet,status", video, videoContent);
+
+					//TODO handle defining playlist
+
+					MediaHttpUploader uploader = insert.getMediaHttpUploader();
+					uploader.setChunkSize(1024 * 1024); //1MB in order to have progress info often
+
+					uploader.setProgressListener(httpUploader -> {
+						switch (httpUploader.getUploadState()) {
+							case NOT_STARTED:
+								logger.info("Not started");
+								break;
+							case INITIATION_STARTED:
+								logger.info("Init started");
+								videoInfo.setStatus(INITIALIZING);
+								updateVideo(videoInfo);
+
+								break;
+							case INITIATION_COMPLETE:
+								logger.info("Init complete");
+								break;
+							case MEDIA_IN_PROGRESS:
+								double progress = httpUploader.getProgress();
+								logger.info("Upload in progress: " + progress);
+
+								BigDecimal percent = new BigDecimal(progress * 100, new MathContext(2));
+
+								videoInfo.setStatus(IN_PROGRESS);
+								videoInfo.setProgression(percent);
+								updateVideo(videoInfo);
+
+								break;
+							case MEDIA_COMPLETE:
+								logger.info("Upload complete");
+								break;
+						}
+					});
+
+					//this call is blocking until video is completely uploaded
+					Video insertedVideo = insert.execute();
+
+					videoInfo.setStatus(DONE);
+					videoInfo.setYoutubeId(insertedVideo.getId());
+					updateVideo(videoInfo);
+
+					//TODO upload thumbnail if available
+				}
+
+			} catch (InterruptedException e) {
+				running = false;
+			} catch (GeneralSecurityException | IOException e) {
+				//TODO handling this error more smart in avoid to crash upload thread
+				logger.error("Error when uploading [{}]", lastUpload, e);
+			}
+		}
+
+		void shutdown() {
+			running = false;
+		}
+
+		List<VideoInfo> listWaiting() {
+			return videoToUpload.stream().collect(Collectors.toList());
+		}
+
+		private void updateVideo(VideoInfo video) {
+			template.convertAndSend(HomeCtrl.VIDEOS_TOPIC, video);
+			videoSrv.updateVideo(video);
+		}
+	}
 }

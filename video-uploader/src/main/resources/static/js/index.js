@@ -27,7 +27,7 @@ angular.module('videosApp', [])
 					} else if (body.eventId) {
 						for (var i = 0; i < $scope.videos.length; i++) {
 							var video = $scope.videos[i];
-							if (video.id == body.eventId) {
+							if (video.eventId == body.eventId) {
 								video.progression = body.progression;
 								video.status = body.status;
 							}

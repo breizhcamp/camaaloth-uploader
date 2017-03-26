@@ -89,12 +89,16 @@
 					<td>{{video.dirName}} <span ng-show="video.thumbnail" class="glyphicon glyphicon-picture"></span></td>
 					<td>
 						<span ng-switch="video.status">
-							<span ng-switch-when="NOT_STARTED">En attente</span>
-							<span ng-switch-when="DONE">Terminé</span>
+							<span ng-switch-when="NOT_STARTED">Non démarré</span>
+							<span ng-switch-when="WAITING">En attente</span>
+							<span ng-switch-when="INITIALIZING">Initialisation</span>
+
 							<div ng-switch-when="IN_PROGRESS" class="progress">
 							  <div class="progress-bar" role="progressbar"
 								   style="min-width: 2em; width: {{video.progression}}%">{{video.progression}}%</div>
 							</div>
+
+							<span ng-switch-when="DONE">Terminé</span>
 						</span>
 					</td>
 					<td>
