@@ -16,7 +16,7 @@ angular.module('videosApp', [])
 	stompClient.connect({}, function() {
 
 		stompClient.subscribe("/videos", function(msg) {
-			if (msg.command == "MESSAGE" && msg.body) {
+			if (msg.command === "MESSAGE" && msg.body) {
 				var body = JSON.parse(msg.body);
 
 				$scope.$apply(function() {
@@ -27,7 +27,7 @@ angular.module('videosApp', [])
 					} else if (body.eventId) {
 						for (var i = 0; i < $scope.videos.length; i++) {
 							var video = $scope.videos[i];
-							if (video.eventId == body.eventId) {
+							if (video.eventId === body.eventId) {
 								video.progression = body.progression;
 								video.status = body.status;
 								video.youtubeId = body.youtubeId;
@@ -39,4 +39,7 @@ angular.module('videosApp', [])
 		});
 	});
 
+	$scope.upload = function(video) {
+		stompClient.send('/videos/upload', {}, video.dirName);
+	}
 });

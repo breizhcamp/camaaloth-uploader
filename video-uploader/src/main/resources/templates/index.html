@@ -103,12 +103,10 @@
 						</span>
 					</td>
 					<td>
-						<form ng-show="video.status == 'NOT_STARTED'" th:action="@{'/yt/upload'}" method="post">
-							<input type="hidden" name="path" ng-value="video.dirName">
-							<button type="submit" title="Uploader sur YouTube" class="btn btn-success">
-								<span class="glyphicon glyphicon-cloud-upload"></span>
-							</button>
-						</form>
+						<button type="submit" title="Uploader sur YouTube" class="btn btn-success"
+								ng-click="upload(video)" ng-show="video.status == 'NOT_STARTED'" th:if="${connected}">
+							<span class="glyphicon glyphicon-cloud-upload"></span>
+						</button>
 
 						<a ng-show="video.youtubeId" ng-href="https://www.youtube.com/watch?v={{video.youtubeId}}" class="btn btn-primary" target="_blank">
 							<span class="glyphicon glyphicon-film"></span>

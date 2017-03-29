@@ -10,7 +10,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import org.breizhcamp.video.uploader.config.YoutubeConfig;
-import org.breizhcamp.video.uploader.controller.HomeCtrl;
+import org.breizhcamp.video.uploader.controller.YoutubeCtrl;
 import org.breizhcamp.video.uploader.dto.Event;
 import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.breizhcamp.video.uploader.exception.UpdateException;
@@ -27,10 +27,10 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.stream.Collectors;
 
 import static org.breizhcamp.video.uploader.dto.VideoInfo.Status.*;
 
@@ -174,104 +174,113 @@ public class YoutubeSrv {
 		@Override
 		public void run() {
 			String lastUpload = null;
+			int nbErrors = 0;
+
 			try {
 				while (running) {
-					VideoInfo videoInfo = videoToUpload.take();
-					logger.info("Uploading video: [{}]", videoInfo.getPath());
+					try {
+						VideoInfo videoInfo = videoToUpload.take();
+						logger.info("Uploading video: [{}]", videoInfo.getPath());
 
-					lastUpload = videoInfo.getDirName();
-					Event event = eventSrv.getFromId(videoInfo.getEventId());
+						lastUpload = videoInfo.getDirName();
+						Event event = eventSrv.getFromId(videoInfo.getEventId());
 
-					YouTube youtube = getYoutube();
+						YouTube youtube = getYoutube();
 
-					String speakers = event.getSpeakers();
-					if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
+						String speakers = event.getSpeakers();
+						if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
 
-					Video video = new Video();
+						Video video = new Video();
 
-					VideoStatus videoStatus = new VideoStatus();
-					videoStatus.setPrivacyStatus("unlisted");
-					video.setStatus(videoStatus);
+						VideoStatus videoStatus = new VideoStatus();
+						videoStatus.setPrivacyStatus("unlisted");
+						video.setStatus(videoStatus);
 
-					VideoSnippet snippet = new VideoSnippet();
-					video.setSnippet(snippet);
-					snippet.setTitle(event.getName());
-					snippet.setDescription(event.getDescription() + "\n\n" + "Par " + speakers); //TODO check markdown formatting
+						VideoSnippet snippet = new VideoSnippet();
+						video.setSnippet(snippet);
+						snippet.setTitle(event.getName());
+						//youtube doesn't support formatting, we keep the markdown as it readable as is
+						snippet.setDescription(event.getDescription() + "\n\n" + "Par " + speakers);
 
-					FileContent videoContent = new FileContent("video/*", videoInfo.getPath().toFile());
+						FileContent videoContent = new FileContent("video/*", videoInfo.getPath().toFile());
 
-					YouTube.Videos.Insert insert = youtube.videos().insert("snippet,status", video, videoContent);
+						YouTube.Videos.Insert insert = youtube.videos().insert("snippet,status", video, videoContent);
 
-					//TODO handle defining playlist
+						MediaHttpUploader uploader = insert.getMediaHttpUploader();
+						uploader.setChunkSize(1024 * 1024); //1MB in order to have progress info often
 
-					MediaHttpUploader uploader = insert.getMediaHttpUploader();
-					uploader.setChunkSize(1024 * 1024); //1MB in order to have progress info often
+						uploader.setProgressListener(httpUploader -> {
+							try {
+								switch (httpUploader.getUploadState()) {
+									case NOT_STARTED:
+										logger.info("[{}] Not started", videoInfo.getEventId());
+										break;
+									case INITIATION_STARTED:
+										logger.info("[{}] Init started", videoInfo.getEventId());
+										videoInfo.setStatus(INITIALIZING);
+										updateVideo(videoInfo);
 
-					uploader.setProgressListener(httpUploader -> {
-						try {
-							switch (httpUploader.getUploadState()) {
-								case NOT_STARTED:
-									logger.info("[{}] Not started", videoInfo.getEventId());
-									break;
-								case INITIATION_STARTED:
-									logger.info("[{}] Init started", videoInfo.getEventId());
-									videoInfo.setStatus(INITIALIZING);
-									updateVideo(videoInfo);
+										break;
+									case INITIATION_COMPLETE:
+										logger.info("[{}] Init complete", videoInfo.getEventId());
+										videoInfo.setStatus(IN_PROGRESS);
+										videoInfo.setProgression(BigDecimal.ZERO);
+										updateVideo(videoInfo);
 
-									break;
-								case INITIATION_COMPLETE:
-									logger.info("[{}] Init complete", videoInfo.getEventId());
-									videoInfo.setStatus(IN_PROGRESS);
-									videoInfo.setProgression(BigDecimal.ZERO);
-									updateVideo(videoInfo);
+										break;
+									case MEDIA_IN_PROGRESS:
+										double progress = httpUploader.getProgress();
+										logger.info("[{}] Upload in progress: [{}]", videoInfo.getEventId(), progress);
 
-									break;
-								case MEDIA_IN_PROGRESS:
-									double progress = httpUploader.getProgress();
-									logger.info("[{}] Upload in progress: [{}]", videoInfo.getEventId(), progress);
+										BigDecimal percent = new BigDecimal(progress * 100, new MathContext(3));
 
-									BigDecimal percent = new BigDecimal(progress * 100, new MathContext(3));
+										videoInfo.setStatus(IN_PROGRESS);
+										videoInfo.setProgression(percent);
+										updateVideo(videoInfo);
 
-									videoInfo.setStatus(IN_PROGRESS);
-									videoInfo.setProgression(percent);
-									updateVideo(videoInfo);
-
-									break;
-								case MEDIA_COMPLETE:
-									logger.info("[{}] Upload video file complete", videoInfo.getEventId());
-									break;
+										break;
+									case MEDIA_COMPLETE:
+										logger.info("[{}] Upload video file complete", videoInfo.getEventId());
+										break;
+								}
+							} catch (UpdateException e) {
+								//not a critical exception, let the upload continue
+								logger.warn("Cannot send or write update for video [{}]", videoInfo.getDirName(), e);
 							}
-						} catch (UpdateException e) {
-							//not a critical exception, let the upload continue
-							logger.warn("Cannot send or write update for video [{}]", videoInfo.getDirName(), e);
-						}
-					});
+						});
 
-					//this call is blocking until video is completely uploaded
-					Video insertedVideo = insert.execute();
-					videoInfo.setYoutubeId(insertedVideo.getId());
+						//this call is blocking until video is completely uploaded
+						Video insertedVideo = insert.execute();
+						videoInfo.setYoutubeId(insertedVideo.getId());
 
-					insertInPlaylist(videoInfo);
+						insertInPlaylist(videoInfo);
 
-					videoInfo.setStatus(videoInfo.getThumbnail() == null ? DONE : THUMBNAIL);
-					videoInfo.setProgression(null);
-					updateVideo(videoInfo);
-
-					//upload thumbnail if available
-					if (videoInfo.getThumbnail() != null) {
-						uploadThumbnail(videoInfo);
-						videoInfo.setStatus(DONE);
+						videoInfo.setStatus(videoInfo.getThumbnail() == null ? DONE : THUMBNAIL);
+						videoInfo.setProgression(null);
 						updateVideo(videoInfo);
-					}
 
-					logger.info("[{}] Video uploaded, end of process", videoInfo.getEventId());
+						//upload thumbnail if available
+						if (videoInfo.getThumbnail() != null) {
+							uploadThumbnail(videoInfo);
+							videoInfo.setStatus(DONE);
+							updateVideo(videoInfo);
+						}
+
+						logger.info("[{}] Video uploaded, end of process", videoInfo.getEventId());
+						nbErrors = 0;
+
+					} catch (UpdateException | GeneralSecurityException | IOException e) {
+						logger.error("Error when uploading [{}]", lastUpload, e);
+						nbErrors++;
+
+						if (nbErrors > 5) {
+							throw new RuntimeException("At least 5 videos failed to upload, stopping thread");
+						}
+					}
 				}
 
 			} catch (InterruptedException e) {
 				running = false;
-			} catch (GeneralSecurityException | IOException | UpdateException e) {
-				//TODO handling this error more smart in avoid to crash upload thread
-				logger.error("Error when uploading [{}]", lastUpload, e);
 			}
 		}
 
@@ -307,12 +316,12 @@ public class YoutubeSrv {
 		}
 
 		List<VideoInfo> listWaiting() {
-			return videoToUpload.stream().collect(Collectors.toList());
+			return new ArrayList<>(videoToUpload);
 		}
 
 		private void updateVideo(VideoInfo video) throws UpdateException {
 			try {
-				template.convertAndSend(HomeCtrl.VIDEOS_TOPIC, video);
+				template.convertAndSend(YoutubeCtrl.VIDEOS_TOPIC, video);
 				videoSrv.updateVideo(video);
 			} catch (MessagingException | IOException e) {
 				throw new UpdateException(e);

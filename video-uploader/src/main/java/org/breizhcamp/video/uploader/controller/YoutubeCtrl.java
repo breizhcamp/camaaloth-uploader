@@ -11,6 +11,9 @@ import org.breizhcamp.video.uploader.services.FileSrv;
 import org.breizhcamp.video.uploader.services.VideoSrv;
 import org.breizhcamp.video.uploader.services.YoutubeSrv;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,13 +22,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Controller to handle Google authentication
  */
 @Controller @RequestMapping("/yt")
 public class YoutubeCtrl {
+	public static final String VIDEOS_TOPIC = "/videos";
 
 	@Autowired
 	private YoutubeSrv youtubeSrv;
@@ -89,17 +97,24 @@ public class YoutubeCtrl {
 		return "redirect:/";
 	}
 
-	//TODO handle upload in websocket
-	@PostMapping("/upload")
-	public String uploadVideo(@RequestParam String path) throws IOException, GeneralSecurityException, UpdateException {
+	@SubscribeMapping(VIDEOS_TOPIC)
+	public Collection<VideoInfo> subscribe() throws IOException {
+		Map<String, VideoInfo> videoById = videoSrv.list().stream().collect(Collectors.toMap(VideoInfo::getEventId, Function.identity()));
+
+		youtubeSrv.listWaiting().stream()
+				.map(VideoInfo::getEventId)
+				.forEach(id -> videoById.get(id).setStatus(VideoInfo.Status.WAITING));
+
+		return videoById.values();
+	}
+
+	@MessageMapping(VIDEOS_TOPIC + "/upload")
+	public void upload(@Payload String path) throws UpdateException {
 		String id = fileSrv.getIdFromPath(path);
 		if (id != null) {
 			VideoInfo videoInfo = videoSrv.readDir(fileSrv.getVideosDir().resolve(path));
 			videoInfo.setPlaylistId(ytSession.getCurPlaylist().getId());
 			youtubeSrv.upload(videoInfo);
 		}
-
-		return "redirect:/";
 	}
-
 }
