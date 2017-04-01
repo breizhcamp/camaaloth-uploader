@@ -63,9 +63,11 @@
 					</div>
 
 					<div class="media-right">
-						<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-default">
-							<span class="glyphicon glyphicon-user"></span> Changer de compte
-						</a>
+						<p>
+							<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-default">
+								<span class="glyphicon glyphicon-user"></span> Changer de compte
+							</a>
+						</p>
 					</div>
 				</div>
 			</div>
@@ -81,14 +83,20 @@
 				<tr>
 					<th>Nom répertoire</th>
 					<th style="width: 180px">État</th>
-					<th style="width: 50px;"></th>
+					<th style="width: 50px;">
+						<form method="post" th:action="@{/yt/uploadAll}" class="form-inline">
+							<button type="submit" class="btn btn-success" title="Tout envoyer">
+								<span class="glyphicon glyphicon-cloud-upload"></span>
+							</button>
+						</form>
+					</th>
 				</tr>
 				</thead>
 				<tbody>
 				<tr ng-repeat="video in videos">
 					<td>{{video.dirName}} <span ng-show="video.thumbnail" class="glyphicon glyphicon-picture"></span></td>
 					<td>
-						<span ng-switch="video.status">
+						<div ng-switch="video.status">
 							<span ng-switch-when="NOT_STARTED">Non démarré</span>
 							<span ng-switch-when="WAITING">En attente</span>
 							<span ng-switch-when="INITIALIZING">Initialisation</span>
@@ -98,12 +106,15 @@
 								   style="min-width: 3em; width: {{video.progression}}%">{{video.progression}}%</div>
 							</div>
 
-							<span ng-switch-when="THUMBNAIL">Miniature</span>
+							<div ng-switch-when="THUMBNAIL" class="progress">
+								<div class="progress-bar progress-bar-striped active" role="progressbar" style="width: 100%">Miniature</div>
+							</div>
+
 							<span ng-switch-when="DONE">Terminé</span>
-						</span>
+						</div>
 					</td>
 					<td>
-						<button type="submit" title="Uploader sur YouTube" class="btn btn-success"
+						<button type="button" title="Uploader sur YouTube" class="btn btn-success"
 								ng-click="upload(video)" ng-show="video.status == 'NOT_STARTED'" th:if="${connected}">
 							<span class="glyphicon glyphicon-cloud-upload"></span>
 						</button>

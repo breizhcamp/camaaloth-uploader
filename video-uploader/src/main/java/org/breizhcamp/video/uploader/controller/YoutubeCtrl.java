@@ -97,6 +97,17 @@ public class YoutubeCtrl {
 		return "redirect:/";
 	}
 
+	@PostMapping("uploadAll")
+	public String uploadAll() throws IOException, UpdateException {
+		for (VideoInfo video : videoSrv.list()) {
+			if (video.getStatus() == VideoInfo.Status.NOT_STARTED) {
+				youtubeSrv.upload(video);
+			}
+		}
+
+		return "redirect:/";
+	}
+
 	@SubscribeMapping(VIDEOS_TOPIC)
 	public Collection<VideoInfo> subscribe() throws IOException {
 		Map<String, VideoInfo> videoById = videoSrv.list().stream().collect(Collectors.toMap(VideoInfo::getEventId, Function.identity()));
