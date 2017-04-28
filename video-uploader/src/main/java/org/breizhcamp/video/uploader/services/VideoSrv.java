@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 import static org.breizhcamp.video.uploader.dto.VideoInfo.Status.NOT_STARTED;
 
@@ -38,6 +39,7 @@ public class VideoSrv {
 			return list.filter(Files::isDirectory)
 					.map(this::readDir)
 					.filter(Objects::nonNull)
+					.sorted(comparing(VideoInfo::getDirName))
 					.collect(toList());
 		}
 	}

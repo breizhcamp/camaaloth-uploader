@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.toList;
+
 /**
  * Controller to handle Google authentication
  */
@@ -101,6 +104,7 @@ public class YoutubeCtrl {
 	public String uploadAll() throws IOException, UpdateException {
 		for (VideoInfo video : videoSrv.list()) {
 			if (video.getStatus() == VideoInfo.Status.NOT_STARTED) {
+				video.setPlaylistId(ytSession.getCurPlaylist().getId());
 				youtubeSrv.upload(video);
 			}
 		}
@@ -116,7 +120,9 @@ public class YoutubeCtrl {
 				.map(VideoInfo::getEventId)
 				.forEach(id -> videoById.get(id).setStatus(VideoInfo.Status.WAITING));
 
-		return videoById.values();
+		return videoById.values().stream()
+				.sorted(comparing(VideoInfo::getDirName))
+				.collect(toList());
 	}
 
 	@MessageMapping(VIDEOS_TOPIC + "/upload")
