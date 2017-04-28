@@ -33,6 +33,7 @@ dependencies {
     compile('org.springframework.boot:spring-boot-starter-thymeleaf')
 	compile('org.springframework.boot:spring-boot-starter-websocket')
 	compile('com.fasterxml.jackson.datatype:jackson-datatype-jsr310')
+	compile('commons-io:commons-io:2.5')
 
     compile('org.webjars:bootstrap:3.3.7-1')
     compile('org.webjars:sockjs-client:1.1.2')

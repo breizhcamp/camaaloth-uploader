@@ -63,7 +63,7 @@ public class FileSrv {
 	/**
 	 * @return the directory name for a specific event
 	 */
-	private String buildDirName(Event event) {
+	public String buildDirName(Event event) {
 		String name = event.getName().replaceAll("[\\\\/:*?\"<>|]", "-");
 		String speakers = event.getSpeakers().replaceAll("[\\\\/:*?\"<>|]", "-");
 		if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
