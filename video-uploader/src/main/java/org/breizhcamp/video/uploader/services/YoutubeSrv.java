@@ -198,9 +198,9 @@ public class YoutubeSrv {
 
 						VideoSnippet snippet = new VideoSnippet();
 						video.setSnippet(snippet);
-						snippet.setTitle(event.getName());
+						snippet.setTitle(makeTitle(event, speakers));
 						//youtube doesn't support formatting, we keep the markdown as it readable as is
-						snippet.setDescription(event.getDescription() + "\n\n" + "Par " + speakers);
+						snippet.setDescription(event.getDescription());
 
 						FileContent videoContent = new FileContent("video/*", videoInfo.getPath().toFile());
 
@@ -252,19 +252,19 @@ public class YoutubeSrv {
 						//this call is blocking until video is completely uploaded
 						Video insertedVideo = insert.execute();
 						videoInfo.setYoutubeId(insertedVideo.getId());
-
-						insertInPlaylist(videoInfo);
-
-						videoInfo.setStatus(videoInfo.getThumbnail() == null ? DONE : THUMBNAIL);
 						videoInfo.setProgression(null);
-						updateVideo(videoInfo);
 
 						//upload thumbnail if available
 						if (videoInfo.getThumbnail() != null) {
-							uploadThumbnail(videoInfo);
-							videoInfo.setStatus(DONE);
+							videoInfo.setStatus(THUMBNAIL);
 							updateVideo(videoInfo);
+
+							uploadThumbnail(videoInfo);
 						}
+
+						insertInPlaylist(videoInfo);
+						videoInfo.setStatus(DONE);
+						updateVideo(videoInfo);
 
 						logger.info("[{}] Video uploaded, end of process", videoInfo.getEventId());
 						nbErrors = 0;
@@ -327,5 +327,24 @@ public class YoutubeSrv {
 				throw new UpdateException(e);
 			}
 		}
+	}
+
+	/**
+	 * Make a title compatible with Youtube : 100 chars with no < or >.
+	 * https://developers.google.com/youtube/v3/docs/videos#snippet.title
+	 * @param event Event detail
+	 * @param speakers Speakers' name
+	 * @return Compatible twitter video title
+	 */
+	private String makeTitle(Event event, String speakers) {
+		String name = event.getName();
+
+		if (name.length() + speakers.length() + 3 > 100) {
+			name = name.substring(0, 100-speakers.length()-4) + "…";
+		}
+
+		name = name.replace('<', '-').replace('>', '-');
+
+		return name + " (" + speakers + ")";
 	}
 }
