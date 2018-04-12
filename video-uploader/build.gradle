@@ -43,7 +43,6 @@ dependencies {
 	compile('com.google.apis:google-api-services-youtube:v3-rev182-1.22.0')
 
 	runtime('org.springframework.boot:spring-boot-devtools')
-	compileOnly('org.projectlombok:lombok')
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }

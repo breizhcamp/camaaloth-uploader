@@ -58,12 +58,11 @@ public class VideoSrv {
 
 			Path thumbnail = getFirstFileFromExt(dir, "png");
 
-			VideoInfo videoInfo = VideoInfo.builder()
-					.path(videoFile)
-					.status(NOT_STARTED)
-					.thumbnail(thumbnail)
-					.eventId(fileSrv.getIdFromPath(dir.getFileName().toString()))
-					.build();
+			VideoInfo videoInfo = new VideoInfo();
+			videoInfo.setPath(videoFile);
+			videoInfo.setStatus(NOT_STARTED);
+			videoInfo.setThumbnail(thumbnail);
+			videoInfo.setEventId(fileSrv.getIdFromPath(dir.getFileName().toString()));
 
 			Path statusFile = dir.resolve("metadata.json");
 			if (Files.exists(statusFile)) {
@@ -85,11 +84,10 @@ public class VideoSrv {
 	 * @param video Video to update
 	 */
 	public void updateVideo(VideoInfo video) throws IOException {
-		VideoMetadata metadata = VideoMetadata.builder()
-				.status(video.getStatus())
-				.progression(video.getProgression())
-				.youtubeId(video.getYoutubeId())
-				.build();
+		VideoMetadata metadata = new VideoMetadata();
+		metadata.setStatus(video.getStatus());
+		metadata.setProgression(video.getProgression());
+		metadata.setYoutubeId(video.getYoutubeId());
 
 		Path statusFile = video.getPath().getParent().resolve("metadata.json");
 		objectMapper.writeValue(statusFile.toFile(), metadata);

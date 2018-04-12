@@ -2,14 +2,12 @@ package org.breizhcamp.video.uploader.dto;
 
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.Playlist;
-import lombok.Data;
 
 import java.util.List;
 
 /**
  * Current channels, selected channel and playlist
  */
-@Data
 public class YoutubeSession {
 
 	/** List of all channel in current logged account */
@@ -23,4 +21,36 @@ public class YoutubeSession {
 
 	/** Selected playlist */
 	private Playlist curPlaylist;
+
+	public List<Channel> getChannels() {
+		return channels;
+	}
+
+	public void setChannels(List<Channel> channels) {
+		this.channels = channels;
+	}
+
+	public Channel getCurChan() {
+		return curChan;
+	}
+
+	public void setCurChan(Channel curChan) {
+		this.curChan = curChan;
+	}
+
+	public List<Playlist> getPlaylists() {
+		return playlists;
+	}
+
+	public void setPlaylists(List<Playlist> playlists) {
+		this.playlists = playlists;
+	}
+
+	public Playlist getCurPlaylist() {
+		return curPlaylist;
+	}
+
+	public void setCurPlaylist(Playlist curPlaylist) {
+		this.curPlaylist = curPlaylist;
+	}
 }
