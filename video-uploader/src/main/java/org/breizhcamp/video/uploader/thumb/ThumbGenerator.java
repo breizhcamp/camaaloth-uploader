@@ -29,27 +29,29 @@ public class ThumbGenerator {
 		FileSrv fileSrv = ctx.getBean(FileSrv.class);
 		List<Event> events = eventSrv.list();
 
-		String svg = IOUtils.toString(ThumbGenerator.class.getResourceAsStream("/thumb.svg"), UTF_8);
+		String svgThumb = IOUtils.toString(ThumbGenerator.class.getResourceAsStream("/thumb.svg"), UTF_8);
+		String svgIntroVideo = IOUtils.toString(ThumbGenerator.class.getResourceAsStream("/intro.svg"), UTF_8);
 
 		for (Event event : events) {
-			if (event.getVenue().equals("Amphi A")) {
+			if (event.getVenue().equals("Amphi C") || event.getVenue().equals("Amphi D")) {
 				String speakers = event.getSpeakers().replaceAll("[\\\\/:*?\"<>|]", "-");
 				if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
 
 				Path destDir = fileSrv.getVideosDir().resolve(fileSrv.buildDirName(event));
-				makeThumb(svg, event.getName(), speakers, destDir);
+				makeThumb(svgThumb, event.getName(), speakers, destDir, "thumb.png");
+				makeThumb(svgIntroVideo, event.getName(), speakers, destDir, "intro.png");
 			}
 		}
 	}
 
-	private static void makeThumb(String svg, String title, String speakers, Path destDir) throws IOException, InterruptedException {
+	private static void makeThumb(String svg, String title, String speakers, Path destDir, String targetName) throws IOException, InterruptedException {
 		Path replaced = Files.createTempFile("thumb_", ".svg");
 		String content = svg.replace("TitreTalk", title);
 		content = content.replace("SpeakersTalk", speakers);
 
 		Files.write(replaced, content.getBytes(UTF_8));
 
-		String[] cmd = {"/usr/bin/inkscape", "--export-png=" + destDir.toString() + "/thumb.png", replaced.toAbsolutePath().toString()};
+		String[] cmd = {"/usr/bin/inkscape", "--export-png=" + destDir.toString() + "/" + targetName, replaced.toAbsolutePath().toString()};
 
 		System.out.println(Arrays.toString(cmd));
 		Process p = Runtime.getRuntime().exec(cmd);

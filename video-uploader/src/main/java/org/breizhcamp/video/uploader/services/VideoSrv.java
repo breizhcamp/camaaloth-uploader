@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -53,15 +54,17 @@ public class VideoSrv {
 	public VideoInfo readDir(Path dir) {
 		//retrieving first video file
 		try {
-			Path videoFile = getFirstFileFromExt(dir, "mp4", "mkv");
+			Path videoFile = getFirstFileFromExt(dir, "mp4");
 			if (videoFile == null) return null;
 
-			Path thumbnail = getFirstFileFromExt(dir, "png");
+			Path thumbnail = dir.resolve("thumb.png");
 
 			VideoInfo videoInfo = new VideoInfo();
 			videoInfo.setPath(videoFile);
 			videoInfo.setStatus(NOT_STARTED);
-			videoInfo.setThumbnail(thumbnail);
+			if (thumbnail.toFile().exists()) {
+				videoInfo.setThumbnail(thumbnail);
+			}
 			videoInfo.setEventId(fileSrv.getIdFromPath(dir.getFileName().toString()));
 
 			Path statusFile = dir.resolve("metadata.json");

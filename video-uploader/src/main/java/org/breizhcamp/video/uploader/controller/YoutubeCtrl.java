@@ -130,7 +130,9 @@ public class YoutubeCtrl {
 		String id = fileSrv.getIdFromPath(path);
 		if (id != null) {
 			VideoInfo videoInfo = videoSrv.readDir(fileSrv.getVideosDir().resolve(path));
-			videoInfo.setPlaylistId(ytSession.getCurPlaylist().getId());
+			if (ytSession.getCurPlaylist() != null) {
+				videoInfo.setPlaylistId(ytSession.getCurPlaylist().getId());
+			}
 			youtubeSrv.upload(videoInfo);
 		}
 	}

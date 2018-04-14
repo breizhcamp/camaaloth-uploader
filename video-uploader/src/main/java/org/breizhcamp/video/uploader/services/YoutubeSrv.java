@@ -7,6 +7,7 @@ import com.google.api.client.googleapis.media.MediaHttpUploader;
 import com.google.api.client.http.FileContent;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.DateTime;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import org.breizhcamp.video.uploader.config.YoutubeConfig;
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.security.GeneralSecurityException;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
@@ -207,7 +209,7 @@ public class YoutubeSrv {
 						YouTube.Videos.Insert insert = youtube.videos().insert("snippet,status", video, videoContent);
 
 						MediaHttpUploader uploader = insert.getMediaHttpUploader();
-						uploader.setChunkSize(1024 * 1024); //1MB in order to have progress info often
+						uploader.setChunkSize(1024 * 1024 * 50); //10MB in order to have progress info often :p
 
 						uploader.setProgressListener(httpUploader -> {
 							try {
