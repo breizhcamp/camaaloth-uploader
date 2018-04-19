@@ -185,7 +185,7 @@ public class YoutubeSrv {
 						logger.info("Uploading video: [{}]", videoInfo.getPath());
 
 						lastUpload = videoInfo.getDirName();
-						Event event = eventSrv.getFromId(videoInfo.getEventId());
+						Event event = eventSrv.getFromId(Integer.parseInt(videoInfo.getEventId()));
 
 						YouTube youtube = getYoutube();
 

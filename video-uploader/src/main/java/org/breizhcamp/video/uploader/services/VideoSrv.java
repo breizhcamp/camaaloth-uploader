@@ -1,6 +1,7 @@
 package org.breizhcamp.video.uploader.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.breizhcamp.video.uploader.dto.Event;
 import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.breizhcamp.video.uploader.dto.VideoMetadata;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,15 +14,21 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static org.breizhcamp.video.uploader.dto.VideoInfo.Status.DONE;
 import static org.breizhcamp.video.uploader.dto.VideoInfo.Status.NOT_STARTED;
 
 @Service
 public class VideoSrv {
+
+	@Autowired
+	private EventSrv eventSrv;
 
 	@Autowired
 	private FileSrv fileSrv;
@@ -45,6 +52,20 @@ public class VideoSrv {
 		}
 	}
 
+	public void generateUpdatedSchedule() throws IOException {
+		List<Event> events = eventSrv.list();
+		Map<String, String> completedUploadsUrls = list().stream()
+				.filter(v -> v.getStatus().equals(DONE))
+				.collect(toMap(VideoInfo::getEventId, VideoInfo::getYoutubeId));
+		List<Event> updatedEvents = events.stream()
+				.map(event -> {
+					if (completedUploadsUrls.containsKey(String.valueOf(event.getId()))) {
+						event.setVideoUrl("https://www.youtube.com/watch?v=" + completedUploadsUrls.get(String.valueOf(event.getId())));
+					}
+					return event;
+				}).collect(toList());
+		objectMapper.writeValue(fileSrv.getVideosDir().resolve("schedule.json").toFile(), updatedEvents);
+	}
 
 	/**
 	 * Read a directory and create the associate video object
@@ -54,7 +75,7 @@ public class VideoSrv {
 	public VideoInfo readDir(Path dir) {
 		//retrieving first video file
 		try {
-			Path videoFile = getFirstFileFromExt(dir, "mp4");
+			Path videoFile = getFirstFileFromExt(dir, "mkv");
 			if (videoFile == null) return null;
 
 			Path thumbnail = dir.resolve("thumb.png");

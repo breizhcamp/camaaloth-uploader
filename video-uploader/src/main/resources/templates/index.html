@@ -25,6 +25,9 @@
 				<button th:if="${!dirExists}" type="submit" class="btn btn-primary">Créer le répertoire</button>
 				<button th:if="${dirExists}" type="submit" class="btn btn-default">Recréer les répertoires des sessions</button>
 			</form>
+			<form method="post" th:action="@{/generateSchedule}">
+				<button th:if="${dirExists}" type="submit" class="btn btn-default">Exporter schedule.json</button>
+			</form>
 		</div>
 
 		<!-- *******************************************   YOUTUBE   ******************************************************** -->

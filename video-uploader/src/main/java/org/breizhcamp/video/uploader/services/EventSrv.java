@@ -34,7 +34,7 @@ public class EventSrv {
 	 * Retrieve all events group by id
 	 * @return Event list
 	 */
-	public Map<String, Event> listById() throws IOException {
+	public Map<Integer, Event> listById() throws IOException {
 		return list().stream()
 				.collect(toMap(Event::getId, identity()));
 	}
@@ -46,7 +46,7 @@ public class EventSrv {
 	 * @throws IOException If we cannot read schedule json file
 	 * @throws FileNotFoundException If the event is not found in schedule
 	 */
-	public Event getFromId(String id) throws IOException {
+	public Event getFromId(Integer id) throws IOException {
 		return list().stream()
 				.filter(e -> e.getId().equals(id))
 				.findFirst()

@@ -1,7 +1,9 @@
 package org.breizhcamp.video.uploader.controller;
 
+import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.breizhcamp.video.uploader.dto.YoutubeSession;
 import org.breizhcamp.video.uploader.services.FileSrv;
+import org.breizhcamp.video.uploader.services.VideoSrv;
 import org.breizhcamp.video.uploader.services.YoutubeSrv;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -18,6 +20,9 @@ import java.security.GeneralSecurityException;
 public class HomeCtrl {
 	@Autowired
 	private FileSrv fileSrv;
+
+	@Autowired
+	private VideoSrv videoSrv;
 
 	@Autowired
 	private YoutubeSrv youtubeSrv;
@@ -45,4 +50,9 @@ public class HomeCtrl {
 		return "redirect:./";
 	}
 
+	@PostMapping("/generateSchedule")
+	public String generateSchedule() throws IOException {
+		videoSrv.generateUpdatedSchedule();
+		return "redirect:/";
+	}
 }
