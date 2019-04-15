@@ -129,7 +129,7 @@ public class YoutubeCtrl {
 	public void upload(@Payload String path) throws UpdateException {
 		String id = fileSrv.getIdFromPath(path);
 		if (id != null) {
-			VideoInfo videoInfo = videoSrv.readDir(fileSrv.getVideosDir().resolve(path));
+			VideoInfo videoInfo = videoSrv.readDir(fileSrv.getRecordingDir().resolve(path));
 			if (ytSession.getCurPlaylist() != null) {
 				videoInfo.setPlaylistId(ytSession.getCurPlaylist().getId());
 			}

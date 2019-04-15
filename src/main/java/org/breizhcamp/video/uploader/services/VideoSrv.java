@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,7 @@ public class VideoSrv {
 	 * @return VideoInfo found and status
 	 */
 	public List<VideoInfo> list() throws IOException {
-		Path dir = fileSrv.getVideosDir();
+		Path dir = fileSrv.getRecordingDir();
 
 		try (Stream<Path> list = Files.list(dir)) {
 			return list.filter(Files::isDirectory)
@@ -64,7 +63,7 @@ public class VideoSrv {
 					}
 					return event;
 				}).collect(toList());
-		objectMapper.writeValue(fileSrv.getVideosDir().resolve("schedule.json").toFile(), updatedEvents);
+		objectMapper.writeValue(fileSrv.getRecordingDir().resolve("schedule.json").toFile(), updatedEvents);
 	}
 
 	/**

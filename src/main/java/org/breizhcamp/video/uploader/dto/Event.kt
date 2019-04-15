@@ -8,7 +8,7 @@ import java.time.LocalDateTime
  * JSON deserialization of an Event
  */
 class Event {
-    var id: Integer? = null
+    var id: Int? = null
     var name: String? = null
     var description: String? = null
     var speakers: String? = null

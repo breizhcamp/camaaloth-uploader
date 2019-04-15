@@ -2,13 +2,16 @@ package org.breizhcamp.video.uploader.services;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.breizhcamp.video.uploader.CamaalothUploaderProps;
 import org.breizhcamp.video.uploader.dto.Event;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
@@ -21,13 +24,15 @@ public class EventSrv {
 	@Autowired
 	private ObjectMapper mapper;
 
+	@Autowired
+	private CamaalothUploaderProps props;
+
 	/**
 	 * List all events in schedule
 	 * @return Event list
 	 */
 	public List<Event> list() throws IOException {
-		InputStream schedule = EventSrv.class.getResourceAsStream("/schedule.json");
-		return mapper.readValue(schedule, new TypeReference<List<Event>>(){});
+		return mapper.readValue(Paths.get(props.getAssetsDir(), "schedule.json").toFile(), new TypeReference<List<Event>>(){});
 	}
 
 	/**

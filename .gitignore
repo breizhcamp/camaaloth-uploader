@@ -49,6 +49,7 @@ gradle-app.setting
 
 #test directory
 /videos/
+/assets/
 src/main/resources/schedule.json
 
 #oauth creds

@@ -1,6 +1,5 @@
 package org.breizhcamp.video.uploader.controller;
 
-import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.breizhcamp.video.uploader.dto.YoutubeSession;
 import org.breizhcamp.video.uploader.services.FileSrv;
 import org.breizhcamp.video.uploader.services.VideoSrv;
@@ -32,7 +31,7 @@ public class HomeCtrl {
 
 	@GetMapping("/")
 	public String home(Model model) throws IOException, GeneralSecurityException {
-		Path videosDir = fileSrv.getVideosDir();
+		Path videosDir = fileSrv.getRecordingDir();
 
 		model.addAttribute("videosDir", videosDir);
 		model.addAttribute("dirExists", Files.isDirectory(videosDir));
