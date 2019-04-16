@@ -19,4 +19,6 @@ class YoutubeSession {
 
     /** Selected playlist  */
     var curPlaylist: Playlist? = null
+
+    fun playlistsSorted() = playlists?.sortedBy { it.snippet.title }
 }

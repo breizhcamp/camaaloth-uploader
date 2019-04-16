@@ -57,7 +57,7 @@
 								<label for="select-playlist">Playlist</label>
 								<select id="select-playlist" name="playlist" class="form-control">
 									<option value="none">Aucune</option>
-									<option th:each="p : ${ytSession.playlists}"
+									<option th:each="p : ${ytSession.playlistsSorted()}"
 											th:value="${p.id}" th:text="${p.snippet.title}"
 											th:selected="${ytSession.curPlaylist != null && p.id == ytSession.curPlaylist.id}"></option>
 								</select>
