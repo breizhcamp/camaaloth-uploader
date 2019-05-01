@@ -2,7 +2,7 @@ package org.breizhcamp.video.uploader.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-import java.time.LocalDateTime
+import java.time.ZonedDateTime
 
 /**
  * JSON deserialization of an Event
@@ -14,9 +14,9 @@ class Event {
     var speakers: String? = null
     var language: String? = null
     @JsonProperty("event_start")
-    var eventStart: LocalDateTime? = null
+    var eventStart: ZonedDateTime? = null
     @JsonProperty("event_end")
-    var eventEnd: LocalDateTime? = null
+    var eventEnd: ZonedDateTime? = null
     @JsonProperty("event_type")
     var eventType: String? = null
     var format: String? = null
