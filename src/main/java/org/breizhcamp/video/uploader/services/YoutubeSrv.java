@@ -7,7 +7,6 @@ import com.google.api.client.googleapis.media.MediaHttpUploader;
 import com.google.api.client.http.FileContent;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.DateTime;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import org.breizhcamp.video.uploader.config.YoutubeConfig;
@@ -28,7 +27,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.security.GeneralSecurityException;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
@@ -185,7 +183,7 @@ public class YoutubeSrv {
 						logger.info("Uploading video: [{}]", videoInfo.getPath());
 
 						lastUpload = videoInfo.getDirName();
-						Event event = eventSrv.getFromId(Integer.parseInt(videoInfo.getEventId()));
+						Event event = eventSrv.readAndGetById(Integer.parseInt(videoInfo.getEventId()));
 
 						YouTube youtube = getYoutube();
 

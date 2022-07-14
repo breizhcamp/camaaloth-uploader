@@ -1,6 +1,7 @@
 package org.breizhcamp.video.uploader.controller;
 
 import org.breizhcamp.video.uploader.dto.YoutubeSession;
+import org.breizhcamp.video.uploader.services.EventSrv;
 import org.breizhcamp.video.uploader.services.FileSrv;
 import org.breizhcamp.video.uploader.services.VideoSrv;
 import org.breizhcamp.video.uploader.services.YoutubeSrv;
@@ -17,6 +18,9 @@ import java.security.GeneralSecurityException;
 
 @Controller
 public class HomeCtrl {
+	@Autowired
+	private EventSrv eventSrv;
+
 	@Autowired
 	private FileSrv fileSrv;
 
@@ -53,5 +57,11 @@ public class HomeCtrl {
 	public String generateSchedule() throws IOException {
 		videoSrv.generateUpdatedSchedule();
 		return "redirect:/";
+	}
+
+	@PostMapping("/fixMissingIdsInSchedule")
+	public String fixMissingIdsInSchedule() throws IOException {
+		eventSrv.generateMissingIdsAndWrite();
+		return "redirect:./";
 	}
 }

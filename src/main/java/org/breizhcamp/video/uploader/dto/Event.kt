@@ -1,5 +1,6 @@
 package org.breizhcamp.video.uploader.dto
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
 
 import java.time.ZonedDateTime
@@ -14,8 +15,10 @@ class Event {
     var speakers: String? = null
     var language: String? = null
     @JsonProperty("event_start")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
     var eventStart: ZonedDateTime? = null
     @JsonProperty("event_end")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
     var eventEnd: ZonedDateTime? = null
     @JsonProperty("event_type")
     var eventType: String? = null

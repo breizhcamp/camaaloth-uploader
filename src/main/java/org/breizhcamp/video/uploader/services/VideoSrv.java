@@ -52,7 +52,7 @@ public class VideoSrv {
 	}
 
 	public void generateUpdatedSchedule() throws IOException {
-		List<Event> events = eventSrv.list();
+		List<Event> events = eventSrv.read();
 		Map<String, String> completedUploadsUrls = list().stream()
 				.filter(v -> v.getStatus().equals(DONE))
 				.collect(toMap(VideoInfo::getEventId, VideoInfo::getYoutubeId));
@@ -74,7 +74,7 @@ public class VideoSrv {
 	public VideoInfo readDir(Path dir) {
 		//retrieving first video file
 		try {
-			Path videoFile = getFirstFileFromExt(dir, "mkv");
+			Path videoFile = getFirstFileFromExt(dir, "mp4");
 			if (videoFile == null) return null;
 
 			Path thumbnail = dir.resolve("thumb.png");

@@ -1,5 +1,6 @@
 package org.breizhcamp.video.uploader.thumb
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.commons.io.FileUtils
 import org.breizhcamp.video.uploader.CamaalothUploaderProps
 import org.breizhcamp.video.uploader.services.EventSrv
@@ -23,17 +24,13 @@ class ThumbGeneratorSrv(private val eventSrv: EventSrv, private val fileSrv: Fil
 
     fun generateAllThumbs() {
         val svgThumb = FileUtils.readFileToString(Paths.get(props.assetsDir, "thumb.svg").toFile(), UTF_8)
-        val svgIntroVideo = FileUtils.readFileToString(Paths.get(props.assetsDir, "intro.svg").toFile(), UTF_8)
 
-        for (event in eventSrv.list()) {
-            if (event.venue == "Amphi B" || event.venue == "Amphi C" || event.venue == "Amphi D") {
-                var speakers = event.speakers!!.replace("[\\\\/:*?\"<>|]".toRegex(), "-")
-                if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length - 2)
+        for (event in eventSrv.read()) {
+            var speakers = event.speakers!!.replace("[\\\\/:*?\"<>|]".toRegex(), "-")
+            if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length - 2)
 
-                val destDir = fileSrv.recordingDir.resolve(fileSrv.buildDirName(event))
-                makeThumb(svgThumb, event.name, speakers, destDir, "thumb.png")
-                makeThumb(svgIntroVideo, event.name, speakers, destDir, "intro.png")
-            }
+            val destDir = fileSrv.recordingDir.resolve(fileSrv.buildDirName(event))
+            makeThumb(svgThumb, event.name, speakers, destDir, "thumb.png")
         }
     }
 
@@ -48,13 +45,14 @@ class ThumbGeneratorSrv(private val eventSrv: EventSrv, private val fileSrv: Fil
         if (!Files.exists(destDir)) {
             Files.createDirectory(destDir)
         }
+        if (!Files.exists(destDir.resolve(targetName))) {
+            val cmd = arrayOf("/usr/bin/inkscape", "--export-png=$destDir/$targetName", replaced.toAbsolutePath().toString())
 
-        val cmd = arrayOf("/usr/bin/inkscape", "--export-png=$destDir/$targetName", replaced.toAbsolutePath().toString())
-
-        println(Arrays.toString(cmd))
-        val p = Runtime.getRuntime().exec(cmd)
-        val exit = p.waitFor()
-        println("exit: $exit")
+            println(Arrays.toString(cmd))
+            val p = Runtime.getRuntime().exec(cmd)
+            val exit = p.waitFor()
+            println("exit: $exit")
+        }
 
         Files.delete(replaced)
     }
@@ -70,7 +68,7 @@ class ThumbGeneratorApplication {
     }
 
     @Bean
-    fun eventSrv() = EventSrv()
+    fun eventSrv(props: CamaalothUploaderProps) = EventSrv(props)
 
     @Bean
     fun fileSrv(eventSrv: EventSrv, props: CamaalothUploaderProps) = FileSrv(eventSrv, props)

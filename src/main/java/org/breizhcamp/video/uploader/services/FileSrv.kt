@@ -29,7 +29,7 @@ class FileSrv(private val eventSrv: EventSrv, private val props: CamaalothUpload
     @Throws(IOException::class)
     fun createDirs() {
         Files.createDirectories(recordingDir)
-        val events = eventSrv.list()
+        val events = eventSrv.read()
 
         for (event in events) {
             val dir = recordingDir.resolve(buildDirName(event))
@@ -60,7 +60,9 @@ class FileSrv(private val eventSrv: EventSrv, private val props: CamaalothUpload
                 + " - " + name + " (" + speakers + ") - " + talk.id)
     }
 
-    private fun cleanForFilename(str: String?) =
-            stripAccents(str).replace(Regex("[\\\\/:*?\"<>|]"), "-").replace(Regex("[^A-Za-z,\\-\\\\ ]"), "")
-
+    private fun cleanForFilename(str: String?) = str?.let { str ->
+        stripAccents(str)
+            .replace(Regex("[\\\\/:*?\"<>|]"), "-")
+            .replace(Regex("[^A-Za-z,\\-\\\\ ]"), "")
+    }
 }
