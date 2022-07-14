@@ -178,10 +178,10 @@ public class YoutubeSrv {
 
 			try {
 				while (running) {
-					try {
-						VideoInfo videoInfo = videoToUpload.take();
-						logger.info("Uploading video: [{}]", videoInfo.getPath());
+					VideoInfo videoInfo = videoToUpload.take();
+					logger.info("Uploading video: [{}]", videoInfo.getPath());
 
+					try {
 						lastUpload = videoInfo.getDirName();
 						Event event = eventSrv.readAndGetById(Integer.parseInt(videoInfo.getEventId()));
 
@@ -271,6 +271,12 @@ public class YoutubeSrv {
 
 					} catch (UpdateException | GeneralSecurityException | IOException e) {
 						logger.error("Error when uploading [{}]", lastUpload, e);
+						videoInfo.setStatus(FAILED);
+						try {
+							updateVideo(videoInfo);
+						} catch (UpdateException ex) {
+							logger.error("Unable to update metadata", ex);
+						}
 						nbErrors++;
 
 						if (nbErrors > 5) {

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.breizhcamp.video.uploader.dto.Event;
 import org.breizhcamp.video.uploader.dto.VideoInfo;
 import org.breizhcamp.video.uploader.dto.VideoMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -89,10 +91,15 @@ public class VideoSrv {
 
 			Path statusFile = dir.resolve("metadata.json");
 			if (Files.exists(statusFile)) {
-				VideoMetadata metadata = objectMapper.readValue(statusFile.toFile(), VideoMetadata.class);
-				videoInfo.setStatus(metadata.getStatus());
-				videoInfo.setProgression(metadata.getProgression());
-				videoInfo.setYoutubeId(metadata.getYoutubeId());
+				try {
+					VideoMetadata metadata = objectMapper.readValue(statusFile.toFile(), VideoMetadata.class);
+					videoInfo.setStatus(metadata.getStatus());
+					videoInfo.setProgression(metadata.getProgression());
+					videoInfo.setYoutubeId(metadata.getYoutubeId());
+				} catch (IOException e) {
+					logger.error("Unable to read metadata in {}", statusFile);
+					throw e;
+				}
 			}
 
 			return videoInfo;
@@ -135,4 +142,6 @@ public class VideoSrv {
 			throw new UncheckedIOException(e);
 		}
 	}
+
+	private static final Logger logger = LoggerFactory.getLogger(VideoSrv.class);
 }

@@ -117,11 +117,12 @@
 							</div>
 
 							<span ng-switch-when="DONE">Terminé</span>
+							<span ng-switch-when="FAILED">Erreur</span>
 						</div>
 					</td>
 					<td>
 						<button type="button" title="Uploader sur YouTube" class="btn btn-success"
-								ng-click="upload(video)" ng-show="video.status == 'NOT_STARTED'" th:if="${connected}">
+								ng-click="upload(video)" ng-show="video.status == 'NOT_STARTED' || video.status == 'FAILED'" th:if="${connected}">
 							<span class="glyphicon glyphicon-cloud-upload"></span>
 						</button>
 

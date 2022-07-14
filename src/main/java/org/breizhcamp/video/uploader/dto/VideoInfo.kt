@@ -38,7 +38,9 @@ class VideoInfo {
         /** Setting thumbnail in progress  */
         THUMBNAIL,
         /** Upload done, youtubeId should be set  */
-        DONE
+        DONE,
+        /** If something went wrong */
+        FAILED
     }
 
     constructor() {}
