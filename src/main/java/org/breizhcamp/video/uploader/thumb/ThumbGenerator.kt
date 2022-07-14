@@ -26,11 +26,15 @@ class ThumbGeneratorSrv(private val eventSrv: EventSrv, private val fileSrv: Fil
         val svgThumb = FileUtils.readFileToString(Paths.get(props.assetsDir, "thumb.svg").toFile(), UTF_8)
 
         for (event in eventSrv.read()) {
-            var speakers = event.speakers!!.replace("[\\\\/:*?\"<>|]".toRegex(), "-")
-            if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length - 2)
+            if (event.speakers != null) {
+                var speakers = event.speakers!!.replace("[\\\\/:*?\"<>|]".toRegex(), "-")
+                if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length - 2)
 
-            val destDir = fileSrv.recordingDir.resolve(fileSrv.buildDirName(event))
-            makeThumb(svgThumb, event.name, speakers, destDir, "thumb.png")
+                val destDir = fileSrv.recordingDir.resolve(fileSrv.buildDirName(event))
+                makeThumb(svgThumb, event.name, speakers, destDir, "thumb.png")
+            } else {
+                println("WARNING: speaker is null for ${event.id} ${event.name}")
+            }
         }
     }
 
