@@ -13,10 +13,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static java.util.Comparator.comparing;
@@ -64,7 +61,7 @@ public class VideoSrv {
 						event.setVideoUrl("https://www.youtube.com/watch?v=" + completedUploadsUrls.get(String.valueOf(event.getId())));
 					}
 					return event;
-				}).collect(toList());
+				}).sorted(Comparator.comparingInt(Event::getId)).collect(toList());
 		objectMapper.writeValue(fileSrv.getRecordingDir().resolve("schedule.json").toFile(), updatedEvents);
 	}
 
