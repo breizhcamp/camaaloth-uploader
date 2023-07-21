@@ -12,6 +12,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.lang.Integer.max
 import java.nio.file.Paths
+import java.util.*
 
 @Service
 class EventSrv(props: CamaalothUploaderProps) {
@@ -42,19 +43,17 @@ class EventSrv(props: CamaalothUploaderProps) {
      * @throws FileNotFoundException If the event is not found in schedule
      */
     @Throws(IOException::class)
-    fun readAndGetById(id: Int): Event? = readAndAssociateByIds()[id]
+    fun readAndGetById(id: String): Event? = readAndAssociateByIds()[id]
 
     /**
      * Generate ids for the events that don't have one
      */
     fun generateMissingIdsAndWrite() {
         val events = read()
-        var nextId = events.fold(0) { acc, event -> max(acc, event.id ?: 0) } + 10000000
 
         val fixedEvents = events.map { event ->
             if (event.id == null) {
-                event.id = nextId
-                nextId++
+                event.id = UUID.randomUUID().toString()
             }
 
             event

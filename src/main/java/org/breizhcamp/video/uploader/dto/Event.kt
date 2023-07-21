@@ -9,7 +9,7 @@ import java.time.ZonedDateTime
  * JSON deserialization of an Event
  */
 class Event {
-    var id: Int? = null
+    var id: String? = null
     var name: String? = null
     var description: String? = null
     var speakers: String? = null

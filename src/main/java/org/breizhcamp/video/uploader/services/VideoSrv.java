@@ -61,7 +61,7 @@ public class VideoSrv {
 						event.setVideoUrl("https://www.youtube.com/watch?v=" + completedUploadsUrls.get(String.valueOf(event.getId())));
 					}
 					return event;
-				}).sorted(Comparator.comparingInt(Event::getId)).collect(toList());
+				}).sorted(Comparator.comparing(Event::getId)).collect(toList());
 		objectMapper.writeValue(fileSrv.getRecordingDir().resolve("schedule.json").toFile(), updatedEvents);
 	}
 
