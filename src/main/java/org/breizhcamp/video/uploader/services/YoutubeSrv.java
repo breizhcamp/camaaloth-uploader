@@ -200,7 +200,7 @@ public class YoutubeSrv {
 						video.setSnippet(snippet);
 						snippet.setTitle(makeTitle(event, speakers));
 						//youtube doesn't support formatting, we keep the markdown as it readable as is
-						snippet.setDescription(event.getDescription());
+						snippet.setDescription(event.getDescription().replace('<', '〈').replace('>', '〉'));
 
 						FileContent videoContent = new FileContent("video/*", videoInfo.getPath().toFile());
 
@@ -349,7 +349,7 @@ public class YoutubeSrv {
 			name = name.substring(0, 100-speakers.length()-4) + "…";
 		}
 
-		name = name.replace('<', '-').replace('>', '-');
+		name = name.replace('<', '〈').replace('>', '〉');
 
 		return name + " (" + speakers + ")";
 	}
