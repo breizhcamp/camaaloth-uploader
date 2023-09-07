@@ -5,7 +5,6 @@ import org.breizhcamp.video.uploader.services.EventSrv;
 import org.breizhcamp.video.uploader.services.FileSrv;
 import org.breizhcamp.video.uploader.services.VideoSrv;
 import org.breizhcamp.video.uploader.services.YoutubeSrv;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,20 +17,19 @@ import java.security.GeneralSecurityException;
 
 @Controller
 public class HomeCtrl {
-	@Autowired
-	private EventSrv eventSrv;
+	private final EventSrv eventSrv;
+	private final FileSrv fileSrv;
+	private final VideoSrv videoSrv;
+	private final YoutubeSrv youtubeSrv;
+	private final YoutubeSession ytSession;
 
-	@Autowired
-	private FileSrv fileSrv;
-
-	@Autowired
-	private VideoSrv videoSrv;
-
-	@Autowired
-	private YoutubeSrv youtubeSrv;
-
-	@Autowired
-	private YoutubeSession ytSession;
+	public HomeCtrl(EventSrv eventSrv, FileSrv fileSrv, VideoSrv videoSrv, YoutubeSrv youtubeSrv, YoutubeSession ytSession) {
+		this.eventSrv = eventSrv;
+		this.fileSrv = fileSrv;
+		this.videoSrv = videoSrv;
+		this.youtubeSrv = youtubeSrv;
+		this.ytSession = ytSession;
+	}
 
 	@GetMapping("/")
 	public String home(Model model) throws IOException, GeneralSecurityException {

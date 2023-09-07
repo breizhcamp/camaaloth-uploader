@@ -17,6 +17,7 @@ import org.breizhcamp.video.uploader.exception.UpdateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,15 @@ public class YoutubeSrv {
 	@PreDestroy
 	public void tearDown() {
 		if (uploader != null) uploader.shutdown();
+	}
+
+	public String getAuthUrl(String redirectUrl) {
+		return ytAuthFlow.newAuthorizationUrl().setRedirectUri(redirectUrl).setAccessType("offline").build();
+	}
+
+	public void handleAuth(String code, String redirectUrl) throws IOException {
+		GoogleTokenResponse token = ytAuthFlow.newTokenRequest(code).setRedirectUri(redirectUrl).execute();
+		saveToken(token);
 	}
 
 	/**
@@ -345,7 +355,7 @@ public class YoutubeSrv {
 	 * @return Compatible twitter video title
 	 */
 	private String makeTitle(Event event, String speakers) {
-		String name = event.getName();
+		String name = "[REFACTO] " + event.getName();
 
 		if (name.length() + speakers.length() + 3 > 100) {
 			name = name.substring(0, 100-speakers.length()-4) + "…";

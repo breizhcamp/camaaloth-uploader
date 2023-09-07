@@ -25,8 +25,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-
     implementation ("org.apache.commons:commons-lang3")
     implementation("commons-io:commons-io:2.6")
     implementation("org.webjars:bootstrap:3.3.7-1")
@@ -35,6 +33,10 @@ dependencies {
     implementation("org.webjars:angularjs:1.6.2")
 
     implementation("com.google.apis:google-api-services-youtube:v3-rev182-1.22.0")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("net.sourceforge.htmlunit:htmlunit")
+    testImplementation("com.microsoft.playwright:playwright:1.36.0")
 }
 
 tasks.withType<KotlinCompile> {
