@@ -56,15 +56,14 @@ public class YoutubeCtrl {
 	private String redirectUrl;
 
 	@GetMapping("/auth")
-	public String auth(@RequestParam String baseUrl) throws IOException {
+	public String auth(@RequestParam String baseUrl) {
 		redirectUrl = baseUrl + "yt/return";
-		return "redirect:" + ytAuthFlow.newAuthorizationUrl().setRedirectUri(redirectUrl).setAccessType("offline").build();
+		return "redirect:" + youtubeSrv.getAuthUrl(redirectUrl);
 	}
 
 	@GetMapping("/return")
 	public String returnAuth(@RequestParam String code) throws IOException, GeneralSecurityException {
-		GoogleTokenResponse token = ytAuthFlow.newTokenRequest(code).setRedirectUri(redirectUrl).execute();
-		youtubeSrv.saveToken(token);
+		youtubeSrv.handleAuth(code, redirectUrl);
 		reloadYtSession();
 
 		return "redirect:/";
