@@ -9,7 +9,7 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
-import org.breizhcamp.video.uploader.config.YoutubeConfig;
+import org.breizhcamp.video.uploader.config.YoutubeAuthConfig;
 import org.breizhcamp.video.uploader.controller.YoutubeCtrl;
 import org.breizhcamp.video.uploader.dto.Event;
 import org.breizhcamp.video.uploader.dto.VideoInfo;
@@ -17,7 +17,6 @@ import org.breizhcamp.video.uploader.exception.UpdateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -60,6 +59,12 @@ public class YoutubeSrv {
 	@Autowired
 	private SimpMessagingTemplate template;
 
+	@Autowired
+	private YouTube youtube;
+
+	@Autowired
+	private Credential ytCredential;
+
 	private YouTube ytCache;
 
 	private YtUploader uploader;
@@ -89,7 +94,7 @@ public class YoutubeSrv {
 	 * @return True if connected, false otherwise
 	 */
 	public boolean isConnected() throws IOException {
-		return getCurrentCred() != null;
+		return ytCredential != null;
 	}
 
 	/**
@@ -97,7 +102,7 @@ public class YoutubeSrv {
 	 * @param token Token to save
 	 */
 	public void saveToken(GoogleTokenResponse token) throws IOException {
-		ytAuthFlow.createAndStoreCredential(token, YoutubeConfig.YT_USER_ID);
+		ytAuthFlow.createAndStoreCredential(token, YoutubeAuthConfig.YT_USER_ID);
 		ytCache = null;
 	}
 
@@ -106,7 +111,7 @@ public class YoutubeSrv {
 	 * @return Channels list
 	 */
 	public List<Channel> getChannels() throws GeneralSecurityException, IOException {
-		ChannelListResponse response = getYoutube().channels().list("id,snippet").setMine(true).execute();
+		ChannelListResponse response = youtube.channels().list("id,snippet").setMine(true).execute();
 		return response.getItems();
 	}
 
@@ -116,7 +121,7 @@ public class YoutubeSrv {
 	 * @return List of playlist
 	 */
 	public List<Playlist> getPlaylists(String channelId) throws GeneralSecurityException, IOException {
-		PlaylistListResponse response = getYoutube()
+		PlaylistListResponse response = youtube
 				.playlists().list("id,snippet").setChannelId(channelId).setMaxResults(50L)
 				.execute();
 		return response.getItems();
@@ -135,33 +140,6 @@ public class YoutubeSrv {
 	 */
 	public List<VideoInfo> listWaiting() {
 		return uploader.listWaiting();
-	}
-
-	private YouTube getYoutube() throws GeneralSecurityException, IOException {
-		Credential credential = getCurrentCred();
-		if (credential == null) {
-			ytCache = null;
-			throw new IllegalStateException("Not connected");
-		}
-
-		if (ytCache != null) {
-			return ytCache;
-		}
-
-		ytCache = new YouTube.Builder(httpTransport, jacksonFactory, credential).setApplicationName("yt-uploader/1.0").build();
-		return ytCache;
-	}
-
-	/**
-	 * Retrieve current and valid credential
-	 * @return Valid credential or null
-	 */
-	private Credential getCurrentCred() throws IOException {
-		Credential credential = ytAuthFlow.loadCredential("user");
-		if (credential == null || credential.getExpiresInSeconds() == null || credential.getExpiresInSeconds() < 10) {
-			return null;
-		}
-		return credential;
 	}
 
 	/** Youtube uploader thread */
@@ -194,8 +172,6 @@ public class YoutubeSrv {
 					try {
 						lastUpload = videoInfo.getDirName();
 						Event event = eventSrv.readAndGetById(videoInfo.getEventId());
-
-						YouTube youtube = getYoutube();
 
 						String speakers = event.getSpeakers();
 						if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length() - 2);
@@ -318,14 +294,14 @@ public class YoutubeSrv {
 
 			snippet.setResourceId(resourceId);
 
-			getYoutube().playlistItems().insert("snippet,status", item).execute();
+			youtube.playlistItems().insert("snippet,status", item).execute();
 			logger.info("[{}] Video set in playlist", videoInfo.getEventId());
 		}
 
 		private void uploadThumbnail(VideoInfo videoInfo) throws GeneralSecurityException, IOException {
 			logger.info("[{}] Uploading and defining thumbnail [{}]", videoInfo.getEventId(), videoInfo.getThumbnail());
 			FileContent thumb = new FileContent("image/png", videoInfo.getThumbnail().toFile());
-			getYoutube().thumbnails().set(videoInfo.getYoutubeId(), thumb).execute();
+			youtube.thumbnails().set(videoInfo.getYoutubeId(), thumb).execute();
 			logger.info("[{}] Thumbnail set", videoInfo.getEventId());
 		}
 

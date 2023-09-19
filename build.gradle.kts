@@ -37,6 +37,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("net.sourceforge.htmlunit:htmlunit")
     testImplementation("com.microsoft.playwright:playwright:1.36.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:3.6.0")
 }
 
 tasks.withType<KotlinCompile> {
