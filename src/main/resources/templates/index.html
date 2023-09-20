@@ -22,14 +22,14 @@
 			<h3>Local</h3>
 			Répertoire des vidéos : <strong th:text="${videosDir}"></strong>
 			<form method="post" th:action="@{/createDir}">
-				<button th:if="${!dirExists}" type="submit" class="btn btn-primary">Créer le répertoire</button>
-				<button th:if="${dirExists}" type="submit" class="btn btn-default">Recréer les répertoires des sessions</button>
+				<button th:if="${!dirExists}" type="submit" class="btn btn-primary" id="createDir">Créer le répertoire</button>
+				<button th:if="${dirExists}" type="submit" class="btn btn-default" id="reCreateDir">Recréer les répertoires des sessions</button>
 			</form>
 			<form method="post" th:action="@{/fixMissingIdsInSchedule}">
-				<button th:if="${dirExists}" type="submit" class="btn btn-default">Corriger les ids manquants dans schedule.json</button>
+				<button th:if="${dirExists}" type="submit" class="btn btn-default" id="fixMissingIds">Corriger les ids manquants dans schedule.json</button>
 			</form>
 			<form method="post" th:action="@{/generateSchedule}">
-				<button th:if="${dirExists}" type="submit" class="btn btn-default">Exporter schedule.json</button>
+				<button th:if="${dirExists}" type="submit" class="btn btn-default" id="exportSchedule">Exporter schedule.json</button>
 			</form>
 		</div>
 
@@ -37,7 +37,7 @@
 		<div class="col-md-6">
 			<h3>
 				YouTube
-				<a th:if="${connected}" th:href="@{'/yt/reload'}" title="Recharger les infos de l'utilisateur connecté" class="btn btn-default btn-sm">
+				<a th:if="${connected}" th:href="@{'/yt/reload'}" title="Recharger les infos de l'utilisateur connecté" class="btn btn-default btn-sm" id="reloadUserData" >
 					<span class="glyphicon glyphicon-refresh"></span>
 				</a>
 			</h3>
@@ -47,13 +47,13 @@
 			</div>
 
 			<div th:if="${connected}">
-				<div th:if="${ytSession.curChan}" class="media">
+				<div th:if="${ytSession.currentChannel}" class="media">
 					<div class="media-left">
-						<img th:src="${ytSession.curChan.snippet.thumbnails.default.url}" style="width: 50px; height: 50px">
+						<img th:src="${ytSession.currentChannel.snippet.thumbnails.default.url}" style="width: 50px; height: 50px">
 					</div>
 
 					<div class="media-body">
-						<h4 class="media-heading" th:text="${ytSession.curChan.snippet.title}"></h4>
+						<h4 class="media-heading" th:text="${ytSession.currentChannel.snippet.title}"></h4>
 
 						<form method="post" th:action="@{/yt/curPlaylist}" class="form-inline" id="form-playlist">
 							<div class="form-group">
@@ -108,8 +108,8 @@
 							<span ng-switch-when="INITIALIZING">Initialisation</span>
 
 							<div ng-switch-when="IN_PROGRESS" class="progress">
-							  <div class="progress-bar progress-bar-striped active" role="progressbar"
-								   style="min-width: 3em; width: {{video.progression}}%">{{video.progression}}%</div>
+								<div class="progress-bar progress-bar-striped active" role="progressbar"
+									 style="min-width: 3em; width: {{video.progression}}%">{{video.progression}}%</div>
 							</div>
 
 							<div ng-switch-when="THUMBNAIL" class="progress">
@@ -121,7 +121,7 @@
 						</div>
 					</td>
 					<td>
-						<button type="button" title="Uploader sur YouTube" class="btn btn-success"
+						<button type="button" title="Uploader sur YouTube" class="btn btn-upload-video btn-success"
 								ng-click="upload(video)" ng-show="video.status == 'NOT_STARTED' || video.status == 'FAILED'" th:if="${connected}">
 							<span class="glyphicon glyphicon-cloud-upload"></span>
 						</button>
