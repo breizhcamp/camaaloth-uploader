@@ -1,17 +1,16 @@
 package org.breizhcamp.video.uploader.controller
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.google.api.services.youtube.model.Channel
 import com.google.api.services.youtube.model.ChannelListResponse
 import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
-import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.breizhcamp.video.uploader.enqueueObject
+import org.breizhcamp.video.uploader.verifyRequest
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.web.server.LocalServerPort
+import org.springframework.http.HttpMethod
 import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -24,7 +23,7 @@ class E2ETest {
     private val ytServer = MockWebServer().apply { start(20000) }
 
     @Test
-    fun `should upload video`(){
+    fun `should upload video`() {
         ytServer.enqueueObject(ChannelListResponse())
 
         Playwright.create().use {
@@ -36,7 +35,11 @@ class E2ETest {
             authBtn.click()
 
             assertThat(page.locator("#yt-auth")).not().isVisible()
+
+            ytServer.verifyRequest(
+                path = "/oauth2/v4/token",
+                method = HttpMethod.POST,
+            )
         }
     }
-
 }
