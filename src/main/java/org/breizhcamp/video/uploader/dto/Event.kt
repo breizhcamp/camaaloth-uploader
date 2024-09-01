@@ -1,6 +1,7 @@
 package org.breizhcamp.video.uploader.dto
 
 import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
 import java.time.ZonedDateTime
@@ -32,4 +33,6 @@ class Event {
     var filesUrl:String? = null
     @JsonProperty("slides_url")
     var slidesUrl: String? = null
+    @JsonProperty("level")
+    var level: String? = null
 }
