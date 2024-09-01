@@ -53,5 +53,5 @@ gradle-app.setting
 src/main/resources/schedule.json
 
 #oauth creds
-src/main/resources/oauth-google.json
+src/main/resources/oauth-google*.json
 
