@@ -25,3 +25,12 @@ Lancer `org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt`
 --camaaloth-uploader.recordingDir=REPERTOIRE 
 ```
 
+### Normalisation du son des vidéos
+
+Utiliser `scripts/normalize.sh` pour normaliser le son des vidéos avant upload YouTube 
+
+Il faut avoir installé https://github.com/slhck/ffmpeg-normalize sur sa machine. C'est disponible dans un package AUR:
+
+```commandline
+yay -S python-ffmpeg-progress-yield ffmpeg-normalize
+```
