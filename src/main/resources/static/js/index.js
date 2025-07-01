@@ -13,6 +13,10 @@ angular.module('videosApp', [])
 	var socket = new SockJS("/stomp");
 	var stompClient = Stomp.over(socket);
 
+	// Récupérer l'état de la playlist depuis le template
+	$scope.hasPlaylist = window.hasPlaylist || false;
+	$scope.currentPlaylist = window.currentPlaylist || null;
+
 	stompClient.connect({}, function() {
 
 		stompClient.subscribe("/videos", function(msg) {
@@ -40,6 +44,27 @@ angular.module('videosApp', [])
 	});
 
 	$scope.upload = function(video) {
+		// Vérifier qu'une playlist est sélectionnée
+		if (!$scope.hasPlaylist) {
+			alert('Veuillez sélectionner une playlist avant de lancer l\'upload.');
+			return;
+		}
+		
 		stompClient.send('/videos/upload', {}, video.dirName);
+	}
+
+	$scope.uploadAll = function() {
+		// Vérifier qu'une playlist est sélectionnée
+		if (!$scope.hasPlaylist) {
+			alert('Veuillez sélectionner une playlist avant de lancer l\'upload de toutes les vidéos.');
+			return false;
+		}
+		
+		return true;
+	}
+
+	// Fonction pour vérifier si l'upload est disponible
+	$scope.canUpload = function() {
+		return $scope.hasPlaylist;
 	}
 });
