@@ -1,0 +1,3 @@
+youtube:
+  api:
+    root-url: http://localhost:20000
