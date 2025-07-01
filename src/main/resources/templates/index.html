@@ -5,145 +5,410 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<title>Video uploader</title>
-	<link href="/webjars/bootstrap/3.3.7-1/css/bootstrap.min.css" rel="stylesheet">
+	<title>Video Uploader - BreizhCamp</title>
+	
+	<!-- Bootstrap 5 CSS -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+	<!-- Font Awesome for icons -->
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	
+	<style>
+		:root {
+			--primary-color: #0d6efd;
+			--success-color: #198754;
+			--warning-color: #ffc107;
+			--danger-color: #dc3545;
+			--secondary-color: #6c757d;
+		}
+
+		body {
+			background-color: #f8f9fa;
+			font-size: 14px;
+		}
+
+		.main-header {
+			background: white;
+			border-bottom: 2px solid var(--primary-color);
+			padding: 1rem 0;
+			margin-bottom: 1.5rem;
+		}
+
+		.main-header h1 {
+			font-size: 1.8rem;
+			font-weight: 600;
+			color: var(--primary-color);
+			margin: 0;
+		}
+
+		.section-card {
+			background: white;
+			border: 1px solid #dee2e6;
+			border-radius: 8px;
+			padding: 1.25rem;
+			margin-bottom: 1rem;
+		}
+
+		.section-title {
+			font-size: 1.1rem;
+			font-weight: 600;
+			color: #495057;
+			margin-bottom: 1rem;
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
+		.btn-modern {
+			font-size: 0.875rem;
+			padding: 0.5rem 1rem;
+			border-radius: 6px;
+			font-weight: 500;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.4rem;
+		}
+
+		.btn-modern i {
+			font-size: 0.875rem;
+		}
+
+		.youtube-connected {
+			background: #f8f9fa;
+			border: 1px solid #e9ecef;
+			border-radius: 6px;
+			padding: 1rem;
+		}
+
+		.user-profile {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+		}
+
+		.user-avatar {
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
+		}
+
+		.status-badge {
+			padding: 0.25rem 0.75rem;
+			border-radius: 12px;
+			font-size: 0.75rem;
+			font-weight: 500;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.3rem;
+		}
+
+		.status-not-started { background: #fff3cd; color: #664d03; }
+		.status-waiting { background: #cff4fc; color: #055160; }
+		.status-in-progress { background: #cfe2ff; color: #084298; }
+		.status-done { background: #d1e7dd; color: #0a3622; }
+		.status-failed { background: #f8d7da; color: #58151c; }
+
+		.progress-simple {
+			height: 6px;
+			background: #e9ecef;
+			border-radius: 3px;
+			margin: 0.5rem 0;
+		}
+
+		.progress-bar-simple {
+			height: 100%;
+			background: var(--success-color);
+			border-radius: 3px;
+			transition: width 0.3s ease;
+		}
+
+		.video-table {
+			font-size: 0.875rem;
+		}
+
+		.video-table th {
+			background: #f8f9fa;
+			border-bottom: 2px solid #dee2e6;
+			font-weight: 600;
+			padding: 0.75rem;
+		}
+
+		.video-table td {
+			padding: 0.75rem;
+			vertical-align: middle;
+		}
+
+		.btn-sm-modern {
+			padding: 0.375rem 0.75rem;
+			font-size: 0.75rem;
+		}
+
+		.form-compact {
+			background: #f8f9fa;
+			border-radius: 6px;
+			padding: 1rem;
+		}
+
+		.form-compact .form-select {
+			font-size: 0.875rem;
+		}
+
+		.alert-compact {
+			padding: 0.75rem;
+			margin-bottom: 1rem;
+			font-size: 0.875rem;
+		}
+
+		@media (max-width: 768px) {
+			.main-header h1 {
+				font-size: 1.5rem;
+			}
+			
+			.section-card {
+				padding: 1rem;
+			}
+		}
+	</style>
 </head>
 
 <body>
-<div class="container">
-	<div class="row">
-		<div class="col-md-12">
-			<h1>BreizhCamp Video Uploader</h1>
-		</div>
-	</div>
-
-	<div class="row">
-		<div class="col-md-6">
-			<h3>Local</h3>
-			Répertoire des vidéos : <strong th:text="${videosDir}"></strong>
-			<form method="post" th:action="@{/createDir}">
-				<button th:if="${!dirExists}" type="submit" class="btn btn-primary">Créer le répertoire</button>
-				<button th:if="${dirExists}" type="submit" class="btn btn-default">Recréer les répertoires des sessions</button>
-			</form>
-			<form method="post" th:action="@{/fixMissingIdsInSchedule}">
-				<button th:if="${dirExists}" type="submit" class="btn btn-default">Corriger les ids manquants dans schedule.json</button>
-			</form>
-			<form method="post" th:action="@{/generateSchedule}">
-				<button th:if="${dirExists}" type="submit" class="btn btn-default">Exporter schedule.json</button>
-			</form>
+	<div class="container-fluid">
+		<!-- Header -->
+		<div class="main-header">
+			<div class="container">
+				<h1><i class="fas fa-video"></i> BreizhCamp Video Uploader</h1>
+			</div>
 		</div>
 
-		<!-- *******************************************   YOUTUBE   ******************************************************** -->
-		<div class="col-md-6">
-			<h3>
-				YouTube
-				<a th:if="${connected}" th:href="@{'/yt/reload'}" title="Recharger les infos de l'utilisateur connecté" class="btn btn-default btn-sm">
-					<span class="glyphicon glyphicon-refresh"></span>
-				</a>
-			</h3>
+		<div class="container">
+			<div class="row">
+				<!-- Local Section -->
+				<div class="col-md-6">
+					<div class="section-card">
+						<h3 class="section-title">
+							<i class="fas fa-folder"></i> Gestion Locale
+						</h3>
+						
+						<div class="alert alert-info alert-compact">
+							<i class="fas fa-folder-open"></i> <strong th:text="${videosDir}"></strong>
+						</div>
 
-			<div th:if="${!connected}">
-				<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-primary">S'authentifier sur YouTube</a>
+						<div class="d-grid gap-2">
+							<form method="post" th:action="@{/createDir}">
+								<button th:if="${!dirExists}" type="submit" class="btn btn-primary btn-modern w-100">
+									<i class="fas fa-plus"></i> Créer le répertoire
+								</button>
+								<button th:if="${dirExists}" type="submit" class="btn btn-secondary btn-modern w-100">
+									<i class="fas fa-redo"></i> Recréer les répertoires
+								</button>
+							</form>
+
+							<form method="post" th:action="@{/fixMissingIdsInSchedule}">
+								<button th:if="${dirExists}" type="submit" class="btn btn-outline-secondary btn-modern w-100">
+									<i class="fas fa-tools"></i> Corriger les IDs manquants
+								</button>
+							</form>
+
+							<form method="post" th:action="@{/generateSchedule}">
+								<button th:if="${dirExists}" type="submit" class="btn btn-success btn-modern w-100">
+									<i class="fas fa-download"></i> Exporter schedule.json
+								</button>
+							</form>
+						</div>
+					</div>
+				</div>
+
+				<!-- YouTube Section -->
+				<div class="col-md-6">
+					<div class="section-card">
+						<h3 class="section-title">
+							<i class="fab fa-youtube text-danger"></i> YouTube
+							<a th:if="${connected}" th:href="@{'/yt/reload'}" title="Recharger" 
+							   class="btn btn-outline-secondary btn-sm btn-modern ms-auto">
+								<i class="fas fa-sync"></i>
+							</a>
+						</h3>
+
+						<div th:if="${!connected}">
+							<p class="text-muted mb-3">Connectez-vous pour uploader vos vidéos</p>
+							<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-danger btn-modern">
+								<i class="fas fa-sign-in-alt"></i> S'authentifier sur YouTube
+							</a>
+						</div>
+
+						<div th:if="${connected}">
+							<div th:if="${ytSession.currentChannel}" class="youtube-connected">
+								<div class="user-profile mb-3">
+									<img th:src="${ytSession.currentChannel.snippet.thumbnails.default.url}" 
+									     class="user-avatar" alt="Avatar">
+									<div class="flex-grow-1">
+										<h6 class="mb-1" th:text="${ytSession.currentChannel.snippet.title}"></h6>
+										<small class="text-muted">Chaîne connectée</small>
+									</div>
+									<a th:href="@{'/yt/auth'}" class="btn btn-outline-secondary btn-sm btn-modern">
+										<i class="fas fa-user-cog"></i> Changer
+									</a>
+								</div>
+
+								<div class="form-compact">
+									<form method="post" th:action="@{/yt/curPlaylist}" id="form-playlist">
+										<label for="select-playlist" class="form-label">
+											<i class="fas fa-list"></i> Playlist
+										</label>
+										<select id="select-playlist" name="playlist" class="form-select">
+											<option value="none">Aucune</option>
+											<option th:each="p : ${ytSession.playlistsSorted()}"
+													th:value="${p.id}" th:text="${p.snippet.title}"
+													th:selected="${ytSession.curPlaylist != null && p.id == ytSession.curPlaylist.id}"></option>
+										</select>
+									</form>
+									
+									<div th:if="${ytSession.curPlaylist == null}" class="alert alert-warning alert-compact mt-2">
+										<i class="fas fa-exclamation-triangle"></i> 
+										<strong>Sélectionnez une playlist</strong> pour pouvoir uploader des vidéos.
+									</div>
+									
+									<div th:if="${ytSession.curPlaylist != null}" class="alert alert-success alert-compact mt-2">
+										<i class="fas fa-check-circle"></i> 
+										<a th:href="@{'https://www.youtube.com/playlist?list=' + ${ytSession.curPlaylist.id}}" 
+										   target="_blank" 
+										   class="text-decoration-none fw-bold text-success">
+											<i class="fab fa-youtube"></i> <span th:text="${ytSession.curPlaylist.snippet.title}"></span>
+										</a>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
 
-			<div th:if="${connected}">
-				<div th:if="${ytSession.curChan}" class="media">
-					<div class="media-left">
-						<img th:src="${ytSession.curChan.snippet.thumbnails.default.url}" style="width: 50px; height: 50px">
-					</div>
+			<!-- Video List Section -->
+			<div class="row" ng-app="videosApp">
+				<div class="col-12" ng-controller="VideoListCtrl">
+					<div class="section-card">
+						<div class="d-flex justify-content-between align-items-center mb-3">
+							<h3 class="section-title mb-0">
+								<i class="fas fa-video"></i> Liste des Vidéos
+							</h3>
+							<form method="post" th:action="@{/yt/uploadAll}" class="d-inline" onsubmit="return angular.element(this).scope().uploadAll()">
+								<button type="submit" class="btn btn-success btn-modern" 
+								        title="Tout envoyer" 
+								        ng-disabled="!canUpload()"
+								        ng-class="{'btn-secondary': !canUpload(), 'btn-success': canUpload()}">
+									<i class="fas fa-cloud-upload-alt"></i> 
+									<span ng-if="canUpload()">Tout envoyer</span>
+									<span ng-if="!canUpload()">Sélectionner une playlist</span>
+								</button>
+							</form>
+						</div>
 
-					<div class="media-body">
-						<h4 class="media-heading" th:text="${ytSession.curChan.snippet.title}"></h4>
+						<div ng-show="loaded">
+							<div class="table-responsive">
+								<table class="table table-hover video-table">
+									<thead>
+									<tr>
+										<th>Nom du répertoire</th>
+										<th style="width: 200px;">État</th>
+										<th style="width: 100px;" class="text-center">Actions</th>
+									</tr>
+									</thead>
+									<tbody>
+									<tr ng-repeat="video in videos">
+										<td>
+											<i class="fas fa-video text-muted me-2"></i>
+											{{video.dirName}}
+											<i ng-show="video.thumbnail" class="fas fa-image text-success ms-2" title="Miniature"></i>
+										</td>
+										<td>
+											<div ng-switch="video.status">
+												<span ng-switch-when="NOT_STARTED" class="status-badge status-not-started">
+													<i class="fas fa-clock"></i> Non démarré
+												</span>
+												<span ng-switch-when="WAITING" class="status-badge status-waiting">
+													<i class="fas fa-hourglass-half"></i> En attente
+												</span>
+												<span ng-switch-when="INITIALIZING" class="status-badge status-waiting">
+													<i class="fas fa-spinner fa-spin"></i> Initialisation
+												</span>
 
-						<form method="post" th:action="@{/yt/curPlaylist}" class="form-inline" id="form-playlist">
-							<div class="form-group">
-								<label for="select-playlist">Playlist</label>
-								<select id="select-playlist" name="playlist" class="form-control">
-									<option value="none">Aucune</option>
-									<option th:each="p : ${ytSession.playlistsSorted()}"
-											th:value="${p.id}" th:text="${p.snippet.title}"
-											th:selected="${ytSession.curPlaylist != null && p.id == ytSession.curPlaylist.id}"></option>
-								</select>
+												<div ng-switch-when="IN_PROGRESS">
+													<div class="status-badge status-in-progress mb-1">
+														<i class="fas fa-upload"></i> {{video.progression}}%
+													</div>
+													<div class="progress-simple">
+														<div class="progress-bar-simple" style="width: {{video.progression}}%"></div>
+													</div>
+												</div>
+
+												<div ng-switch-when="THUMBNAIL">
+													<div class="status-badge status-in-progress">
+														<i class="fas fa-image"></i> Miniature
+													</div>
+													<div class="progress-simple">
+														<div class="progress-bar-simple" style="width: 100%"></div>
+													</div>
+												</div>
+
+												<span ng-switch-when="DONE" class="status-badge status-done">
+													<i class="fas fa-check-circle"></i> Terminé
+												</span>
+												<span ng-switch-when="FAILED" class="status-badge status-failed">
+													<i class="fas fa-exclamation-triangle"></i> Erreur
+												</span>
+											</div>
+										</td>
+										<td class="text-center">
+											<button type="button" 
+											        title="{{canUpload() ? 'Upload' : 'Sélectionner une playlist'}}" 
+											        class="btn btn-sm btn-sm-modern me-1"
+											        ng-class="{'btn-success': canUpload(), 'btn-secondary': !canUpload()}"
+													ng-click="upload(video)" 
+													ng-show="video.status == 'NOT_STARTED' || video.status == 'FAILED'" 
+													ng-disabled="!canUpload()"
+													th:if="${connected}">
+												<i class="fas fa-cloud-upload-alt"></i>
+											</button>
+
+											<a ng-show="video.youtubeId" 
+											   ng-href="https://www.youtube.com/watch?v={{video.youtubeId}}" 
+											   class="btn btn-primary btn-sm btn-sm-modern" 
+											   target="_blank" title="YouTube">
+												<i class="fab fa-youtube"></i>
+											</a>
+										</td>
+									</tr>
+									</tbody>
+								</table>
 							</div>
-						</form>
-					</div>
+						</div>
 
-					<div class="media-right">
-						<p>
-							<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-default">
-								<span class="glyphicon glyphicon-user"></span> Changer de compte
-							</a>
-						</p>
+						<div ng-show="!loaded" class="text-center py-4">
+							<div class="spinner-border text-primary" role="status">
+								<span class="visually-hidden">Chargement...</span>
+							</div>
+							<p class="mt-2 text-muted">Chargement des vidéos...</p>
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<!-- *******************************************   VIDEO LIST   ******************************************************** -->
-	<div class="row" ng-app="videosApp">
-		<div class="col-md-12" ng-controller="VideoListCtrl">
-			<h3>Vidéos</h3>
-			<table class="table" ng-show="loaded">
-				<thead>
-				<tr>
-					<th>Nom répertoire</th>
-					<th style="width: 180px">État</th>
-					<th style="width: 50px;">
-						<form method="post" th:action="@{/yt/uploadAll}" class="form-inline">
-							<button type="submit" class="btn btn-success" title="Tout envoyer">
-								<span class="glyphicon glyphicon-cloud-upload"></span>
-							</button>
-						</form>
-					</th>
-				</tr>
-				</thead>
-				<tbody>
-				<tr ng-repeat="video in videos">
-					<td>{{video.dirName}} <span ng-show="video.thumbnail" class="glyphicon glyphicon-picture"></span></td>
-					<td>
-						<div ng-switch="video.status">
-							<span ng-switch-when="NOT_STARTED">Non démarré</span>
-							<span ng-switch-when="WAITING">En attente</span>
-							<span ng-switch-when="INITIALIZING">Initialisation</span>
-
-							<div ng-switch-when="IN_PROGRESS" class="progress">
-							  <div class="progress-bar progress-bar-striped active" role="progressbar"
-								   style="min-width: 3em; width: {{video.progression}}%">{{video.progression}}%</div>
-							</div>
-
-							<div ng-switch-when="THUMBNAIL" class="progress">
-								<div class="progress-bar progress-bar-striped active" role="progressbar" style="width: 100%">Miniature</div>
-							</div>
-
-							<span ng-switch-when="DONE">Terminé</span>
-							<span ng-switch-when="FAILED">Erreur</span>
-						</div>
-					</td>
-					<td>
-						<button type="button" title="Uploader sur YouTube" class="btn btn-success"
-								ng-click="upload(video)" ng-show="video.status == 'NOT_STARTED' || video.status == 'FAILED'" th:if="${connected}">
-							<span class="glyphicon glyphicon-cloud-upload"></span>
-						</button>
-
-						<a ng-show="video.youtubeId" ng-href="https://www.youtube.com/watch?v={{video.youtubeId}}" class="btn btn-primary" target="_blank">
-							<span class="glyphicon glyphicon-film"></span>
-						</a>
-					</td>
-				</tr>
-
-				</tbody>
-			</table>
-		</div>
-	</div>
-
-</div>
-
-<script src="/webjars/jquery/1.11.1/jquery.min.js"></script>
-<script src="/webjars/bootstrap/3.3.7-1/js/bootstrap.min.js"></script>
-<script src="/webjars/sockjs-client/1.1.2/sockjs.min.js"></script>
-<script src="/webjars/stomp-websocket/2.3.3-1/stomp.min.js"></script>
-<script src="/webjars/angularjs/1.6.2/angular.min.js"></script>
-<script th:src="@{'/js/index.js'}"></script>
+	<!-- Bootstrap 5 JS -->
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+	<!-- jQuery -->
+	<script src="/webjars/jquery/1.11.1/jquery.min.js"></script>
+	<!-- WebSocket dependencies -->
+	<script src="/webjars/sockjs-client/1.1.2/sockjs.min.js"></script>
+	<script src="/webjars/stomp-websocket/2.3.3-1/stomp.min.js"></script>
+	<!-- AngularJS -->
+	<script src="/webjars/angularjs/1.6.2/angular.min.js"></script>
+	<!-- Pass playlist info to JavaScript -->
+	<script th:inline="javascript">
+		window.hasPlaylist = [[${connected && ytSession.curPlaylist != null}]];
+		window.currentPlaylist = [[${ytSession.curPlaylist?.snippet?.title}]];
+	</script>
+	<!-- Custom JS -->
+	<script th:src="@{'/js/index.js'}"></script>
 </body>
 </html>
