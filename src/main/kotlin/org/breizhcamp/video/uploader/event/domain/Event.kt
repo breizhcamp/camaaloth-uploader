@@ -15,6 +15,7 @@ data class Event(
     val description: String? = null,
     val speakers: String? = null,
     val language: String? = null,
+    val level:String? = null,
 
     @JsonProperty("event_start")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
