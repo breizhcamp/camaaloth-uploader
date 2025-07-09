@@ -18,6 +18,10 @@ repositories {
     mavenCentral()
 }
 
+springBoot {
+    mainClass = "org.breizhcamp.video.uploader.CamaalothUploaderApplicationKt"
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
