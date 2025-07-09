@@ -1,16 +1,16 @@
 ## Outil d'upload des vidéos du BreizhCamp
 
-### Configuration
-
-Télécharger le schedule.json de l'année en cours
+### Téléchargement du schedule.json
 
 ```bash
-curl -o assets/schedule.json https://raw.githubusercontent.com/breizhcamp/website/production/static/json/schedule.json
+./fetch-schedule.sh
 ```
 
-Créer un client OAuth
+### Configuration auth YT
 
-https://console.cloud.google.com
+Créer un client OAuth sur https://console.cloud.google.com. 
+
+Stocker le token dans `src/main/resources/oauth-google.json`
 
 ### Génération des thumbnails
 
@@ -34,3 +34,12 @@ Il faut avoir installé https://github.com/slhck/ffmpeg-normalize sur sa machine
 ```commandline
 yay -S python-ffmpeg-progress-yield ffmpeg-normalize
 ```
+
+### Tips and tricks
+
+Supprimer les metadata des videos en attente après un redémarrage:
+
+```
+rg -l '\{"status":"WAITING"\}' **/metadata.json  --null| xargs -0 -I {} rm {}
+``` 
+
