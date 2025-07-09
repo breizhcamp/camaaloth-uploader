@@ -108,12 +108,12 @@ class YoutubeLibrary(
          * @return Compatible twitter video title
          */
         private fun makeTitle(event: Event, speakers: String): String {
-            var name = "[REFACTO] " + event.name
+            var name = event.name ?: throw IllegalStateException("Event name is required to create a video title")
             if (name.length + speakers.length + 3 > 100) {
-                name = name.substring(0, 100 - speakers.length - 4) + "…"
+                name = name.substring(0, 100 - speakers.length - 3) + "…"
             }
             name = name.replace('<', '〈').replace('>', '〉')
-            return "$name ($speakers)"
+            return "$name - $speakers"
         }
     }
 }
