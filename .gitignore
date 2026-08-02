@@ -47,11 +47,19 @@ gradle-app.setting
 # Cache of project
 .gradletasknamecache
 
-#test directory
+### Project ###
+
+# Working directories
 /videos/
 /assets/
+
+# Schedule data: exports dropped at the repository root, and the fetched schedule
+/*.json
 src/main/resources/schedule.json
 
-#oauth creds
+# OAuth creds
 src/main/resources/oauth-google*.json
 
+### Local environment ###
+.envrc
+.DS_Store
