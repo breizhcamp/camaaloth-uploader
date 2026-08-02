@@ -60,8 +60,12 @@ class ThumbGeneratorSrv(
             Files.createDirectory(destDir)
         }
         if (!Files.exists(destDir.resolve(targetName))) {
-            val cmd =
-                arrayOf(inkscape.path, "--export-png=$destDir/$targetName", replaced.toAbsolutePath().toString())
+            val cmd = arrayOf(
+                inkscape.path,
+                "--export-type=png",
+                "--export-filename=$destDir/$targetName",
+                replaced.toAbsolutePath().toString(),
+            )
 
             println(Arrays.toString(cmd))
             val p = try {
