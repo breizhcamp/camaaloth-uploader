@@ -1,18 +1,22 @@
 #!/bin/bash
+FFMPEG_NORMALIZE="${FFMPEG_NORMALIZE:-ffmpeg-normalize}"
 
-mkdir -p target/videos target/audiotracks
+mkdir -p target/videos
 
 mapfile -d '' videos < <(find src -name '*.mp4' -print0)
-for video in "${videos[@]}" ; do
+for video in "${videos[@]}"; do
     echo "Processing ${video}"
-    output_video="$(echo $(dirname "$video") | sed -e 's|^src/||' -e 's|/medias/videos$||' -e s'|/|---|g')"
+    output_video="$(dirname "${video}" | sed -e 's|^src/||' -e 's|/.*||')"
 
-    ffmpeg-normalize "${video}" \
-      -pr \
-      -c:a aac -ar 48000 -b:a 96K \
-      -tp -3 -lrt 12 \
-      -f -o "target/videos/${output_video}.mp4"
+    if [ -f "target/videos/${output_video}.mp4" ]; then
+        echo "== Already normalized ${output_video}"
+        continue
+    fi
 
-    ffmpeg -hide_banner -loglevel error -y -i "target/videos/${output_video}.mp4" "target/audiotracks/${output_video}.wav"
-    ebur128 --lufs "target/audiotracks/${output_video}.wav"
+    echo "== Normalized ${output_video}"
+    "${FFMPEG_NORMALIZE}" "${video}" \
+        -pr \
+        -c:a aac -ar 48000 -b:a 96K \
+        -tp -3 -lrt 12 \
+        -f -o "target/videos/${output_video}.mp4"
 done
