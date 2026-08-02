@@ -61,6 +61,23 @@ Il faut avoir installé https://github.com/slhck/ffmpeg-normalize sur sa machine
 yay -S python-ffmpeg-progress-yield ffmpeg-normalize
 ```
 
+Le binaire utilisé est `ffmpeg-normalize` du `PATH`, surchargeable :
+
+```bash
+FFMPEG_NORMALIZE=/chemin/vers/ffmpeg-normalize scripts/normalize.sh
+```
+
+### Vérification du niveau sonore
+
+`scripts/extract_data.sh` mesure le loudness EBU R128 d'un fichier, sans rien réencoder :
+
+```bash
+scripts/extract_data.sh target/videos/talk.mp4
+```
+
+Le résumé en fin de sortie donne l'*Integrated loudness* (cible -23 LUFS), la *Loudness range* et le
+*True peak* (cible -3 dBTP).
+
 ### Tips and tricks
 
 Supprimer les metadata des videos en attente après un redémarrage:
