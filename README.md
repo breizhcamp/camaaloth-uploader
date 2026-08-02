@@ -34,12 +34,21 @@ Il doit contenir les chaines `TitreTalk` et `SpeakersTalk` qui seront remplacé 
 
 Lancer `org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt`
 
+La génération appelle Inkscape. Son chemin est détecté automatiquement (`Inkscape.app` sur macOS,
+`/usr/bin/inkscape` sinon, puis le `PATH`) et peut être forcé :
+
+```bash
+--inkscape-path /chemin/vers/inkscape     # argument
+INKSCAPE_PATH=/chemin/vers/inkscape       # variable d'environnement
+```
+
 ### Parametres
 
 ```
 --camaaloth-uploader.recordingDir=REPERTOIRE
 --oauth-google-path /chemin/oauth-google.json
 --oauth-google '{"installed":{"client_id":"xxx", ...}}'
+--inkscape-path /chemin/vers/inkscape
 ```
 
 ### Normalisation du son des vidéos

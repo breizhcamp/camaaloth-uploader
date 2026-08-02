@@ -1,7 +1,7 @@
 package org.breizhcamp.video.uploader.shared.config
 
 /** Options accepting a value separated by a space, on top of the `--option=value` form. */
-private val SPACED_OPTIONS = setOf("--oauth-google", "--oauth-google-path")
+private val SPACED_OPTIONS = setOf("--oauth-google", "--oauth-google-path", "--inkscape-path")
 
 /**
  * Turns `--option value` into `--option=value` so Spring's command line parser can bind it,

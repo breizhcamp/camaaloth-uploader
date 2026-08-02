@@ -23,6 +23,13 @@ class CliArgsTest {
     }
 
     @Test
+    fun `should merge the inkscape path passed with a space`() {
+        val args = normalizeSpacedOptions(arrayOf("--inkscape-path", "/usr/bin/inkscape"))
+
+        assertThat(args.toList()).containsExactly("--inkscape-path=/usr/bin/inkscape")
+    }
+
+    @Test
     fun `should leave equals form untouched`() {
         val args = normalizeSpacedOptions(arrayOf("--oauth-google-path=/tmp/oauth-google.json"))
 

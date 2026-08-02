@@ -4,6 +4,7 @@ import org.apache.commons.io.FileUtils
 import org.breizhcamp.video.uploader.CamaalothUploaderProps
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
+import org.breizhcamp.video.uploader.shared.config.normalizeSpacedOptions
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.WebApplicationType
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -11,6 +12,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Service
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -21,7 +23,8 @@ import kotlin.text.Charsets.UTF_8
 class ThumbGeneratorSrv(
     private val eventService: EventService,
     private val fileService: FileService,
-    private val props: CamaalothUploaderProps
+    private val props: CamaalothUploaderProps,
+    private val inkscape: InkscapeLocator,
 ) {
 
     fun generateAllThumbs() {
@@ -58,10 +61,17 @@ class ThumbGeneratorSrv(
         }
         if (!Files.exists(destDir.resolve(targetName))) {
             val cmd =
-                arrayOf("/usr/bin/inkscape", "--export-png=$destDir/$targetName", replaced.toAbsolutePath().toString())
+                arrayOf(inkscape.path, "--export-png=$destDir/$targetName", replaced.toAbsolutePath().toString())
 
             println(Arrays.toString(cmd))
-            val p = Runtime.getRuntime().exec(cmd)
+            val p = try {
+                Runtime.getRuntime().exec(cmd)
+            } catch (e: IOException) {
+                throw IllegalStateException(
+                    "Cannot run Inkscape (${inkscape.path}): ${e.message}. " +
+                        "Set INKSCAPE_PATH or pass --inkscape-path /path/to/inkscape.", e
+                )
+            }
             val exit = p.waitFor()
             println("exit: $exit")
         }
@@ -89,5 +99,5 @@ class ThumbGeneratorApplication {
 fun main(args: Array<String>) {
     SpringApplicationBuilder(ThumbGeneratorApplication::class.java)
         .web(WebApplicationType.NONE)
-        .run(*args)
+        .run(*normalizeSpacedOptions(args))
 }
