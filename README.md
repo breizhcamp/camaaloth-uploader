@@ -8,9 +8,24 @@
 
 ### Configuration auth YT
 
-Créer un client OAuth sur https://console.cloud.google.com. 
+Créer un client OAuth sur https://console.cloud.google.com.
 
-Stocker le token dans `src/main/resources/oauth-google.json`
+Le JSON du client doit être fourni au lancement, par l'une de ces sources (par ordre de priorité) :
+
+```bash
+--oauth-google '{"installed":{"client_id":"xxx", ...}}'   # JSON en ligne de commande
+--oauth-google-path /chemin/oauth-google.json             # chemin vers le fichier
+OAUTH_GOOGLE='{"installed":{"client_id":"xxx", ...}}'     # variable d'environnement
+OAUTH_GOOGLE_PATH=/chemin/oauth-google.json               # variable d'environnement
+```
+
+Les deux formes `--option valeur` et `--option=valeur` sont acceptées.
+
+Si aucune de ces sources n'est fournie, l'application refuse de démarrer avec un message listant les
+options disponibles. Le fichier `src/main/resources/oauth-google.json` n'est plus lu.
+
+⚠️ Le JSON passé via `--oauth-google` est visible dans `ps` et dans l'historique du shell : sur une
+machine partagée, préférer `--oauth-google-path` ou la variable d'environnement `OAUTH_GOOGLE`.
 
 ### Génération des thumbnails
 
@@ -22,7 +37,9 @@ Lancer `org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt`
 ### Parametres
 
 ```
---camaaloth-uploader.recordingDir=REPERTOIRE 
+--camaaloth-uploader.recordingDir=REPERTOIRE
+--oauth-google-path /chemin/oauth-google.json
+--oauth-google '{"installed":{"client_id":"xxx", ...}}'
 ```
 
 ### Normalisation du son des vidéos

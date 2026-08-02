@@ -1,5 +1,6 @@
 package org.breizhcamp.video.uploader
 
+import org.breizhcamp.video.uploader.shared.config.normalizeSpacedOptions
 import org.breizhcamp.video.uploader.thumb.ThumbGeneratorApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -18,5 +19,5 @@ import org.springframework.context.annotation.FilterType
 class CamaalothUploaderApplication
 
 fun main(args: Array<String>) {
-    runApplication<CamaalothUploaderApplication>(*args)
+    runApplication<CamaalothUploaderApplication>(*normalizeSpacedOptions(args))
 }

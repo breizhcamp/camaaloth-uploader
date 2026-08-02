@@ -1,7 +1,6 @@
 package org.breizhcamp.video.uploader.shared.config
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
-import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
@@ -12,14 +11,14 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.io.File
-import java.io.InputStreamReader
 
 /**
  * Configuration file for Youtube access
  */
 @Configuration
 class YoutubeAuthConfig(
-    @Value("\${videos.dir:./videos}/.datastore") private val dataStoreDir: File
+    @Value("\${videos.dir:./videos}/.datastore") private val dataStoreDir: File,
+    private val secretsLoader: GoogleClientSecretsLoader,
 ) {
 
     @Bean
@@ -34,12 +33,7 @@ class YoutubeAuthConfig(
 
     @Bean
     fun ytAuthFlow(jacksonFactory: JacksonFactory, httpTransport: HttpTransport): GoogleAuthorizationCodeFlow {
-        val secrets = GoogleClientSecrets.load(
-            jacksonFactory, InputStreamReader(
-                YoutubeAuthConfig::class.java.getResourceAsStream("/oauth-google.json")
-                    ?: error("No oauth-google.json file")
-            )
-        )
+        val secrets = secretsLoader.load(jacksonFactory)
         return GoogleAuthorizationCodeFlow.Builder(
             httpTransport,
             jacksonFactory,
