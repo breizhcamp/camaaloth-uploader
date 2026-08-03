@@ -1,5 +1,7 @@
 package org.breizhcamp.video.uploader.event.domain
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter
+import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.apache.commons.lang3.StringUtils
@@ -40,6 +42,14 @@ data class Event(
 
     @JsonProperty("slides_url")
     val slidesUrl: String? = null,
+
+    /**
+     * Fields the schedule carries but this application does not model, kept as-is so that rewriting
+     * the schedule does not drop them. Being a constructor property, [copy] preserves it too.
+     */
+    @JsonAnySetter
+    @get:JsonAnyGetter
+    val extraFields: Map<String, Any?> = emptyMap(),
 ) {
     private val dayFormat = DateTimeFormatter.ofPattern("dd")
     private val timeFormat = DateTimeFormatter.ofPattern("HH-mm")
