@@ -7,6 +7,7 @@ import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.shared.PathUtils
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.breizhcamp.video.uploader.video.domain.VideoMetadata
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Files
 import java.nio.file.Path
@@ -20,13 +21,26 @@ class VideoService(
     private val objectMapper: ObjectMapper,
     private val eventService: EventService
 ) {
+    private val logger = KotlinLogging.logger { }
 
-    fun list(): List<VideoInfo> = if (!Files.isDirectory(fileService.recordingDir)) emptyList() else
-        Files.list(fileService.recordingDir).asSequence()
+
+    fun list(): List<VideoInfo> {
+        if (!Files.isDirectory(fileService.recordingDir)) return emptyList()
+
+        //read once for the whole list: findEventBy would re-read the schedule file for every video
+        val descriptions = runCatching { eventService.getEvents().associate { it.id to it.description } }
+            .getOrElse {
+                logger.warn(it) { "Cannot read the schedule, listing without the descriptions" }
+                emptyMap()
+            }
+
+        return Files.list(fileService.recordingDir).asSequence()
             .filter { Files.isDirectory(it) }
             .mapNotNull { getInformationsFrom(it) }
+            .onEach { it.description = descriptions[it.eventId] }
             .sortedBy { it.dirName }
             .toList()
+    }
 
     fun generateUpdatedSchedule() {
         val completedUploadsUrls = list()

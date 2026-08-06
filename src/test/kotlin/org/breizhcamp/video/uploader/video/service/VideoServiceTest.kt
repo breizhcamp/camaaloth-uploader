@@ -2,7 +2,9 @@ package org.breizhcamp.video.uploader.video.service
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.breizhcamp.video.uploader.event.domain.Event
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.video.domain.PushStatus
@@ -10,7 +12,10 @@ import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.nio.file.Files
 import java.nio.file.Path
@@ -18,6 +23,7 @@ import java.nio.file.Path
 class VideoServiceTest {
 
     private val fileService = mock(FileService::class.java)
+    private val eventService = mock(EventService::class.java)
     private lateinit var service: VideoService
     private lateinit var talkDir: Path
 
@@ -27,7 +33,7 @@ class VideoServiceTest {
         Files.createFile(talkDir.resolve("1080p.mp4"))
         `when`(fileService.recordingDir).thenReturn(dir)
 
-        service = VideoService(fileService, jacksonObjectMapper(), mock(EventService::class.java))
+        service = VideoService(fileService, jacksonObjectMapper(), eventService)
     }
 
     @Test
@@ -67,6 +73,32 @@ class VideoServiceTest {
         val reloaded = requireNotNull(service.getInformationsFrom(talkDir))
         assertThat(reloaded.status).isEqualTo(VideoInfo.Status.DONE)
         assertThat(reloaded.youtubeId).isEqualTo("abc123")
+    }
+
+    @Test
+    fun `should carry the talk description on every listed video`() {
+        `when`(eventService.getEvents()).thenReturn(
+            listOf(Event(id = "1181830", name = "Un talk", description = "Le résumé du talk"))
+        )
+
+        assertThat(service.list().single().description).isEqualTo("Le résumé du talk")
+    }
+
+    @Test
+    fun `should read the schedule once for the whole list`() {
+        `when`(eventService.getEvents()).thenReturn(listOf(Event(id = "1181830")))
+
+        service.list()
+
+        verify(eventService).getEvents()
+        verify(eventService, never()).findEventBy(anyString())
+    }
+
+    @Test
+    fun `should leave the description empty when the talk is not in the schedule`() {
+        `when`(eventService.getEvents()).thenReturn(emptyList())
+
+        assertThat(service.list().single().description).isNull()
     }
 
     private fun video() = VideoInfo(

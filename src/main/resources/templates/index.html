@@ -152,6 +152,34 @@
 			font-size: 0.875rem;
 		}
 
+		.video-description {
+			white-space: pre-wrap;
+		}
+
+		.thumb-hover {
+			position: relative;
+		}
+
+		.thumb-preview {
+			display: none;
+			position: absolute;
+			z-index: 1080;
+			bottom: 1.6rem;
+			left: -8rem;
+		}
+
+		.thumb-hover:hover .thumb-preview {
+			display: block;
+		}
+
+		.thumb-preview img {
+			width: 320px;
+			border: 1px solid #dee2e6;
+			border-radius: 6px;
+			background: white;
+			box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
+		}
+
 		.alert-compact {
 			padding: 0.75rem;
 			margin-bottom: 1rem;
@@ -175,7 +203,10 @@
 		<!-- Header -->
 		<div class="main-header">
 			<div class="container">
-				<h1><i class="fas fa-video"></i> BreizhCamp Video Uploader</h1>
+				<h1 role="button" data-bs-toggle="modal" data-bs-target="#paths-modal"
+				    title="Voir les chemins et fichiers utilisés">
+					<i class="fas fa-video"></i> BreizhCamp Video Uploader
+				</h1>
 			</div>
 		</div>
 
@@ -309,6 +340,24 @@
 				</div>
 			</div>
 
+			<!-- Opened by clicking a row -->
+			<div class="modal fade" id="video-modal" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog modal-lg modal-dialog-scrollable">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title"><i class="fas fa-video"></i> {{detail.dirName}}</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+						</div>
+						<div class="modal-body">
+							<p ng-if="detail.description" class="mb-0 video-description">{{detail.description}}</p>
+							<p ng-if="!detail.description" class="mb-0 text-muted">
+								Aucune description pour ce talk dans le schedule chargé.
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Progress of the long running operations -->
 			<div class="row" ng-if="batches.length">
 				<div class="col-12">
@@ -433,7 +482,7 @@
 									</tr>
 									</thead>
 									<tbody>
-									<tr ng-repeat="video in visibleVideos()">
+									<tr ng-repeat="video in visibleVideos()" ng-click="showDetail(video)" role="button">
 										<td>
 											<i class="fas fa-video text-muted me-2"></i>
 											{{video.dirName}}
@@ -441,7 +490,14 @@
 										</td>
 										<td>
 											<div class="d-flex gap-3 align-items-center">
-												<span title="{{videoLabel(video)}}">
+												<a ng-if="video.youtubeId" target="_blank" class="text-decoration-none"
+										   ng-click="$event.stopPropagation()"
+												   ng-href="https://www.youtube.com/watch?v={{video.youtubeId}}"
+												   title="{{videoLabel(video)}} — ouvrir sur YouTube">
+													<i class="fas fa-film" ng-class="iconClass(videoState(video))"></i>
+													<i class="fas" ng-class="badgeClass(videoState(video))"></i>
+												</a>
+												<span ng-if="!video.youtubeId" title="{{videoLabel(video)}}">
 													<i class="fas fa-film" ng-class="iconClass(videoState(video))"></i>
 													<i class="fas" ng-class="badgeClass(videoState(video))"></i>
 												</span>
@@ -449,9 +505,14 @@
 													<i class="fas fa-align-left" ng-class="iconClass(video.descriptionStatus)"></i>
 													<i class="fas" ng-class="badgeClass(video.descriptionStatus)"></i>
 												</span>
-												<span title="Miniature : {{pushLabel(video.thumbnailStatus)}}">
+												<span class="thumb-hover" title="Miniature : {{pushLabel(video.thumbnailStatus)}}"
+												      ng-mouseenter="video.hovered = true">
 													<i class="fas fa-image" ng-class="iconClass(video.thumbnailStatus)"></i>
 													<i class="fas" ng-class="badgeClass(video.thumbnailStatus)"></i>
+													<!-- put in the dom only once hovered, loading a hundred thumbnails would be pointless -->
+													<span class="thumb-preview" ng-if="video.hovered && video.thumbnail">
+														<img ng-src="{{thumbUrl(video)}}" alt="Miniature">
+													</span>
 												</span>
 											</div>
 										
@@ -461,7 +522,7 @@
 											<small ng-show="video.status == 'IN_PROGRESS'" class="text-muted">{{video.progression}}%</small>
 										</td>
 										<td>
-											<div class="d-flex gap-1 justify-content-center flex-nowrap">
+											<div class="d-flex gap-1 justify-content-center flex-nowrap" ng-click="$event.stopPropagation()">
 												<button type="button" 
 												        title="{{canUpload() ? 'Upload' : 'Sélectionner une playlist'}}" 
 												        class="btn btn-sm btn-sm-modern"
@@ -511,6 +572,34 @@
 							</div>
 							<p class="mt-2 text-muted">Chargement des vidéos...</p>
 						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Everything the application reads and writes, opened from the title -->
+	<div class="modal fade" id="paths-modal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-lg modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title"><i class="fas fa-folder-open"></i> Chemins et fichiers</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+				</div>
+				<div class="modal-body">
+					<div th:each="group : ${paths}" class="mb-3">
+						<h6 class="text-muted" th:text="${group.key}"></h6>
+						<table class="table table-sm mb-0">
+							<tr th:each="entry : ${group.value}">
+								<td class="text-nowrap" th:text="${entry.label}"></td>
+								<td class="font-monospace small text-break" th:text="${entry.path}"></td>
+								<td class="text-nowrap text-end">
+									<small class="text-muted me-2" th:if="${entry.note}" th:text="${entry.note}"></small>
+									<i class="fas fa-check text-success" th:if="${entry.exists == true}" title="présent"></i>
+									<i class="fas fa-xmark text-danger" th:if="${entry.exists == false}" title="absent"></i>
+								</td>
+							</tr>
+						</table>
 					</div>
 				</div>
 			</div>
