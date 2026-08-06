@@ -236,16 +236,29 @@ class YoutubeService(
         val youtubeId = videoInfo.youtubeId ?: return
 
         push(videoInfo, "description", { videoInfo.descriptionStatus = it }) {
-            val description = eventService.findEventBy(id = requireNotNull(videoInfo.eventId))
-                ?.description
-                ?.takeIf { it.isNotBlank() }
+            val event = eventService.findEventBy(id = requireNotNull(videoInfo.eventId))
+            val description = event?.description?.takeIf { it.isNotBlank() }
 
-            if (description == null) {
-                logger.info { "[${videoInfo.eventId}] No description in the schedule, skipped" }
-                false
-            } else {
-                youtubeLibrary.updateDescription(youtubeId, description)
-                true
+            when {
+                //told apart from an empty description: a schedule from another edition looks the
+                //same otherwise, and the two are a pain to tell from one another in the logs
+                event == null -> {
+                    logger.warn {
+                        "[${videoInfo.eventId}] Not in the schedule, skipped. " +
+                            "Is assetsDir pointing at the right edition?"
+                    }
+                    false
+                }
+
+                description == null -> {
+                    logger.info { "[${videoInfo.eventId}] No description in the schedule, skipped" }
+                    false
+                }
+
+                else -> {
+                    youtubeLibrary.updateDescription(youtubeId, description)
+                    true
+                }
             }
         }
     }

@@ -188,6 +188,30 @@ INKSCAPE_PATH=/chemin/vers/inkscape       # variable d'environnement
 ⚠️ `--videos.dir` est une propriété distincte de `--camaaloth-uploader.recordingDir` : déplacer les
 vidéos ne déplace pas le token, et inversement.
 
+### Traiter une autre édition
+
+L'application ne lit qu'un seul schedule : `<assetsDir>/schedule.json`. Pour reprendre les vidéos
+d'une édition passée, lui donner son propre répertoire d'assets plutôt que d'écraser le courant :
+
+```bash
+mkdir -p assets-2025
+cp 2025-schedule.json assets-2025/schedule.json    # le nom du fichier compte
+cp assets/thumb.svg   assets-2025/                 # modèle de l'époque si tu l'as
+
+java -jar build/libs/camaaloth-uploader-0.0.1-SNAPSHOT.jar \
+  --camaaloth-uploader.assetsDir=assets-2025 \
+  --camaaloth-uploader.recordingDir=/chemin/vers/les/videos/2025
+```
+
+Un event absent du schedule chargé est signalé ainsi, et la vidéo est sautée :
+
+```
+[838332] Not in the schedule, skipped. Is assetsDir pointing at the right edition?
+```
+
+C'est le symptôme d'un `assetsDir` qui pointe sur la mauvaise édition — à ne pas confondre avec
+`No description in the schedule`, qui veut dire que l'event est bien là mais sans description.
+
 ### Fichiers écrits à côté des vidéos
 
 Dans `recordingDir` :
