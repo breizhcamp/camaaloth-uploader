@@ -135,21 +135,33 @@ class YoutubeLibrary(
         /** Refresh the access token when it has less than this left, to survive a slow upload start */
         private const val MIN_TOKEN_VALIDITY_SECONDS = 60L
 
+        /** Longest title Youtube accepts, a longer one is rejected with `invalidTitle` */
+        private const val MAX_TITLE_LENGTH = 100
+
         /**
          * Make a title compatible with Youtube : 100 chars with no < or >.
          * https://developers.google.com/youtube/v3/docs/videos#snippet.title
+         *
+         * The ellipsis takes a character of its own: the talk name has to give one back, otherwise
+         * the title comes out one character too long and Youtube answers `invalidTitle`.
          *
          * @param event    Event detail
          * @param speakers Speakers' name
          * @return Compatible twitter video title
          */
         private fun makeTitle(event: Event, speakers: String): String {
-            var name = event.name ?: throw IllegalStateException("Event name is required to create a video title")
-            if (name.length + speakers.length + 3 > 100) {
-                name = name.substring(0, 100 - speakers.length - 3) + "…"
-            }
-            name = name.replace('<', '〈').replace('>', '〉')
-            return "$name - $speakers"
+            val name = event.name ?: throw IllegalStateException("Event name is required to create a video title")
+            val suffix = " - $speakers"
+            val roomForName = MAX_TITLE_LENGTH - suffix.length
+
+            val shortened = if (name.length <= roomForName) name
+            else name.take((roomForName - 1).coerceAtLeast(0)) + "…"
+
+            //speakers alone can already blow the budget, so cut whatever is left over
+            return (shortened + suffix)
+                .take(MAX_TITLE_LENGTH)
+                .replace('<', '〈')
+                .replace('>', '〉')
         }
     }
 }

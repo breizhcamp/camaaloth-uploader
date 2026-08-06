@@ -1,8 +1,11 @@
 package org.breizhcamp.video.uploader.video.repository
 
 import assertk.assertThat
+import assertk.assertions.endsWith
+import assertk.assertions.hasLength
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -14,15 +17,21 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.util.store.FileDataStoreFactory
 import com.google.api.services.youtube.YouTubeScopes
+import com.google.api.services.youtube.model.Video
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import org.breizhcamp.video.uploader.event.domain.Event
 import org.breizhcamp.video.uploader.shared.config.YoutubeAuthConfig.Companion.YT_USER_ID
+import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+
+private const val MAX_TITLE_LENGTH = 100
 
 class YoutubeLibraryTest {
 
@@ -114,6 +123,57 @@ class YoutubeLibraryTest {
         library.clearCredential()
 
         assertThat(library.hasStoredCredential()).isFalse()
+    }
+
+    @Test
+    fun `should keep a truncated title within the YouTube limit`(@TempDir dir: Path) {
+        val title = titleOf(
+            dir,
+            name = "Au-delà de la hype : gérer des embeddings à l'échelle du milliard dans Elasticsearch et OpenSearch",
+            speakers = "Pietro Mele, Lucian Precup",
+        )
+
+        assertThat(title).hasLength(MAX_TITLE_LENGTH)
+        assertThat(title).endsWith("… - Pietro Mele, Lucian Precup")
+    }
+
+    @Test
+    fun `should leave a short enough title untouched`(@TempDir dir: Path) {
+        val title = titleOf(dir, name = "Kotlin en 2026", speakers = "Alice Simon")
+
+        assertThat(title).isEqualTo("Kotlin en 2026 - Alice Simon")
+    }
+
+    @Test
+    fun `should still fit when the speakers eat the whole budget`(@TempDir dir: Path) {
+        val title = titleOf(dir, name = "Un titre de talk tout à fait raisonnable", speakers = "S".repeat(120))
+
+        assertThat(title.length).isLessThanOrEqualTo(MAX_TITLE_LENGTH)
+    }
+
+    @Test
+    fun `should replace the angle brackets rejected by YouTube`(@TempDir dir: Path) {
+        val title = titleOf(dir, name = "Kotlin <3 vous", speakers = "Alice Simon")
+
+        assertThat(title).isEqualTo("Kotlin 〈3 vous - Alice Simon")
+    }
+
+    /** Build the insert request the uploader would send, and read back the title it carries */
+    private fun titleOf(dir: Path, name: String, speakers: String): String {
+        val flow = newFlow(dir)
+        storeCredential(flow, refreshToken = "stored-refresh", expiresInSeconds = 3600)
+        val video = Files.createFile(dir.resolve("1080p.mp4"))
+        val videoInfo = VideoInfo(
+            path = video,
+            thumbnail = null,
+            eventId = "1183944",
+            status = VideoInfo.Status.NOT_STARTED,
+        )
+
+        val insert = YoutubeLibrary(transport, jsonFactory, flow)
+            .insertVideo(videoInfo, Event(id = "1183944", name = name, speakers = speakers))
+
+        return (requireNotNull(insert).jsonContent as Video).snippet.title
     }
 
     private fun newFlow(dir: Path) = GoogleAuthorizationCodeFlow.Builder(
