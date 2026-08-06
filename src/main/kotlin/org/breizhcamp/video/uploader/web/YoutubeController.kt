@@ -80,16 +80,7 @@ class YoutubeController(
 
     @PostMapping("/curPlaylist")
     fun changeCurPlaylist(@RequestParam playlist: String): String {
-        if ("none" == playlist) {
-            ytSession.curPlaylist = null
-        } else if (ytSession.playlists != null) {
-            ytSession.playlists
-                ?.firstOrNull { it.id == playlist }
-                ?.run {
-                    logger.info { "Changing current playlist $playlist" }
-                    ytSession.curPlaylist = this
-                }
-        }
+        youtubeService.selectPlaylist(playlist)
         return "redirect:/"
     }
 
@@ -101,6 +92,13 @@ class YoutubeController(
                 ytSession.curPlaylist?.let { videoInfo.playlistId = it.id }
                 youtubeService.upload(videoInfo)
             }
+        return "redirect:/"
+    }
+
+    /** Push description and thumbnail of every video already online */
+    @PostMapping("/syncMetadataAll")
+    fun syncMetadataAll(): String {
+        youtubeService.syncAllMetadata()
         return "redirect:/"
     }
 
@@ -126,6 +124,15 @@ class YoutubeController(
                     it.playlistId = currentPlaylist.id
                 }
                 youtubeService.upload(it)
+            }
+        }
+    }
+
+    @MessageMapping("$VIDEOS_TOPIC/syncMetadata")
+    fun syncMetadata(@Payload path: String) {
+        PathUtils.getIdFromPath(path)?.let {
+            videoService.getInformationsFrom(fileService.recordingDir.resolve(path))?.let {
+                youtubeService.syncMetadata(it)
             }
         }
     }

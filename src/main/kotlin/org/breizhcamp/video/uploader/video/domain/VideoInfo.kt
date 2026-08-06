@@ -40,6 +40,8 @@ data class VideoInfo (
         IN_PROGRESS,
         /** Setting thumbnail in progress  */
         THUMBNAIL,
+        /** Pushing description and thumbnail onto a video already online */
+        METADATA,
         /** Upload done, youtubeId should be set  */
         DONE,
         /** If something went wrong */
