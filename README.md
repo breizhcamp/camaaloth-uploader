@@ -27,12 +27,47 @@ options disponibles. Le fichier `src/main/resources/oauth-google.json` n'est plu
 ⚠️ Le JSON passé via `--oauth-google` est visible dans `ps` et dans l'historique du shell : sur une
 machine partagée, préférer `--oauth-google-path` ou la variable d'environnement `OAUTH_GOOGLE`.
 
+### Lancer l'application
+
+Prérequis : un JDK 21 (voir `.tool-versions`) et un client OAuth configuré comme ci-dessus.
+
+En développement :
+
+```bash
+./gradlew bootRun --args="--oauth-google-path /chemin/oauth-google.json"
+```
+
+Depuis le jar :
+
+```bash
+./gradlew build
+java -jar build/libs/camaaloth-uploader-0.0.1-SNAPSHOT.jar --oauth-google-path /chemin/oauth-google.json
+```
+
+L'interface web est alors sur http://localhost:8080. Si ce port est déjà pris (Docker, OrbStack…),
+l'application refuse de démarrer avec `Port 8080 was already in use` : utiliser `--server.port=PORT`.
+
+Le lien d'authentification YouTube renvoie vers le consentement Google ; le token obtenu est conservé
+dans `./videos/.datastore` et réutilisé aux lancements suivants.
+
+Par défaut l'application lit les vidéos dans `videos/` et les assets (`schedule.json`, `thumb.svg`)
+dans `assets/`.
+
 ### Génération des thumbnails
 
 Copier le modèle de thumbnails dans `assets/thumb.svg`.
 Il doit contenir les chaines `TitreTalk` et `SpeakersTalk` qui seront remplacé par le générateur
 
-Lancer `org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt`
+La génération est un batch séparé de l'application web. Depuis l'IDE, lancer la classe
+`org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt` ; en ligne de commande, à partir du jar :
+
+```bash
+java -Dloader.main=org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt \
+  -cp build/libs/camaaloth-uploader-0.0.1-SNAPSHOT.jar \
+  org.springframework.boot.loader.launch.PropertiesLauncher
+```
+
+Une vignette `thumb.png` est écrite dans le répertoire de chaque talk, sauf si elle existe déjà.
 
 La génération appelle Inkscape. Son chemin est détecté automatiquement (`Inkscape.app` sur macOS,
 `/usr/bin/inkscape` sinon, puis le `PATH`) et peut être forcé :
@@ -45,11 +80,17 @@ INKSCAPE_PATH=/chemin/vers/inkscape       # variable d'environnement
 ### Parametres
 
 ```
---camaaloth-uploader.recordingDir=REPERTOIRE
+--camaaloth-uploader.recordingDir=REPERTOIRE   # vidéos à traiter (défaut: videos)
+--camaaloth-uploader.assetsDir=REPERTOIRE      # schedule.json et thumb.svg (défaut: assets)
+--videos.dir=REPERTOIRE                        # emplacement du .datastore du token (défaut: ./videos)
+--server.port=PORT                             # port HTTP (défaut: 8080)
 --oauth-google-path /chemin/oauth-google.json
 --oauth-google '{"installed":{"client_id":"xxx", ...}}'
 --inkscape-path /chemin/vers/inkscape
 ```
+
+⚠️ `--videos.dir` est une propriété distincte de `--camaaloth-uploader.recordingDir` : déplacer les
+vidéos ne déplace pas le token, et inversement.
 
 ### Normalisation du son des vidéos
 
