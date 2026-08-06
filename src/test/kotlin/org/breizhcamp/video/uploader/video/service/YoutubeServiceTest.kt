@@ -255,6 +255,17 @@ class YoutubeServiceTest {
     }
 
     @Test
+    fun `should leave the status alone when the schedule does not know the video`() {
+        val video = videoOnline(thumbnail = null)
+        `when`(eventService.findEventBy("1183944")).thenReturn(null)
+
+        service.pushDescription(video)
+
+        assertThat(video.descriptionStatus).isEqualTo(PushStatus.NOT_STARTED)
+        verify(youtubeLibrary, never()).updateDescription(anyString(), anyString())
+    }
+
+    @Test
     fun `should leave the status alone when there was nothing to push`() {
         val video = videoOnline(thumbnail = null)
         `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "   "))
