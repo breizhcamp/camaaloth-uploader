@@ -12,6 +12,7 @@ import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.exception.UpdateException
 import org.breizhcamp.video.uploader.shared.session.PlaylistStore
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
+import org.breizhcamp.video.uploader.video.domain.PushStatus
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.breizhcamp.video.uploader.video.repository.YoutubeLibrary
 import org.breizhcamp.video.uploader.web.YoutubeController
@@ -213,16 +214,16 @@ class YoutubeService(
         }
     }
 
-    /** Queue every video already online, whatever its recorded status */
+    /** Queue every video already online whose description has not made it yet */
     fun syncAllDescriptions() {
-        onlineVideos()
+        onlineVideos().filter { it.descriptionStatus != PushStatus.DONE }
             .also { logger.info { "Pushing the description of ${it.size} videos" } }
             .also { batchProgress.add(DESCRIPTIONS_BATCH, "Envoi des descriptions", it.size) }
             .forEach { syncDescription(it) }
     }
 
     fun syncAllThumbnails() {
-        onlineVideos()
+        onlineVideos().filter { it.thumbnailStatus != PushStatus.DONE }
             .also { logger.info { "Pushing the thumbnail of ${it.size} videos" } }
             .also { batchProgress.add(THUMBNAILS_BATCH, "Envoi des miniatures", it.size) }
             .forEach { syncThumbnail(it) }
@@ -234,12 +235,18 @@ class YoutubeService(
     fun pushDescription(videoInfo: VideoInfo) {
         val youtubeId = videoInfo.youtubeId ?: return
 
-        push(videoInfo, VideoInfo.Status.METADATA, "description") {
-            eventService.findEventBy(id = requireNotNull(videoInfo.eventId))
+        push(videoInfo, "description", { videoInfo.descriptionStatus = it }) {
+            val description = eventService.findEventBy(id = requireNotNull(videoInfo.eventId))
                 ?.description
                 ?.takeIf { it.isNotBlank() }
-                ?.let { youtubeLibrary.updateDescription(youtubeId, it) }
-                ?: logger.info { "[${videoInfo.eventId}] No description in the schedule, skipped" }
+
+            if (description == null) {
+                logger.info { "[${videoInfo.eventId}] No description in the schedule, skipped" }
+                false
+            } else {
+                youtubeLibrary.updateDescription(youtubeId, description)
+                true
+            }
         }
     }
 
@@ -247,32 +254,53 @@ class YoutubeService(
     fun pushThumbnail(videoInfo: VideoInfo) {
         if (videoInfo.youtubeId == null) return
 
-        push(videoInfo, VideoInfo.Status.THUMBNAIL, "thumbnail") {
-            if (videoInfo.thumbnail != null) youtubeLibrary.uploadThumbnail(videoInfo)
-            else logger.info { "[${videoInfo.eventId}] No thumbnail on disk, skipped" }
+        push(videoInfo, "thumbnail", { videoInfo.thumbnailStatus = it }) {
+            if (videoInfo.thumbnail == null) {
+                logger.info { "[${videoInfo.eventId}] No thumbnail on disk, skipped" }
+                false
+            } else {
+                youtubeLibrary.uploadThumbnail(videoInfo)
+                true
+            }
         }
     }
 
     /**
-     * Run one push, showing it in the list while it lasts.
+     * Run one push, showing it in the list while it lasts and recording how it went.
      *
-     * The broadcast status is not written to disk: the upload stays DONE, a failure here must not
-     * leave the video stuck in an intermediate state on the next start.
+     * @param block returns whether something was really sent to Youtube. Nothing to send leaves the
+     * status untouched, so a later run picks the video up once the description or the thumbnail
+     * finally exists.
      */
-    private fun push(videoInfo: VideoInfo, status: VideoInfo.Status, what: String, block: () -> Unit) {
-        val previousStatus = videoInfo.status
+    private fun push(
+        videoInfo: VideoInfo,
+        what: String,
+        setStatus: (PushStatus) -> Unit,
+        block: () -> Boolean,
+    ) {
         try {
-            broadcast(videoInfo, status)
-            block()
-            broadcast(videoInfo, previousStatus)
+            setStatus(PushStatus.IN_PROGRESS)
+            broadcast(videoInfo)
+
+            setStatus(if (block()) PushStatus.DONE else PushStatus.NOT_STARTED)
         } catch (e: Exception) {
             logger.error(e) { "Unable to push the $what of [${videoInfo.dirName}]" }
-            broadcast(videoInfo, VideoInfo.Status.FAILED)
+            setStatus(PushStatus.FAILED)
         }
+        record(videoInfo)
     }
 
-    private fun broadcast(videoInfo: VideoInfo, status: VideoInfo.Status) {
-        videoInfo.status = status
+    /** Write the outcome next to the video, and show it in the list */
+    private fun record(videoInfo: VideoInfo) {
+        try {
+            videoService.updateVideo(videoInfo)
+        } catch (e: Exception) {
+            logger.warn(e) { "Unable to write the metadata of [${videoInfo.dirName}]" }
+        }
+        broadcast(videoInfo)
+    }
+
+    private fun broadcast(videoInfo: VideoInfo) {
         template.convertAndSend(YoutubeController.VIDEOS_TOPIC, videoInfo)
     }
 
@@ -354,11 +382,15 @@ class YoutubeService(
                         videoInfo.youtubeId = insertedVideo?.id
                         videoInfo.progression = null
 
+                        //the insert carried the description, unless the schedule had none for it
+                        if (!event.description.isNullOrBlank()) videoInfo.descriptionStatus = PushStatus.DONE
+
                         //upload thumbnail if available
                         if (videoInfo.thumbnail != null) {
                             videoInfo.status = VideoInfo.Status.THUMBNAIL
                             updateVideo(videoInfo)
                             youtubeLibrary.uploadThumbnail(videoInfo)
+                            videoInfo.thumbnailStatus = PushStatus.DONE
                         }
                         youtubeLibrary.insertInPlaylist(videoInfo)
                         videoInfo.status = VideoInfo.Status.DONE

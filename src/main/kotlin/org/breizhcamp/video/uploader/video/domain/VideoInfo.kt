@@ -16,12 +16,16 @@ data class VideoInfo (
     var status: Status,
     var youtubeId: String? = null,
     var progression: BigDecimal? = null,
-    var playlistId: String? = null
+    var playlistId: String? = null,
+    var descriptionStatus: PushStatus = PushStatus.NOT_STARTED,
+    var thumbnailStatus: PushStatus = PushStatus.NOT_STARTED,
 ){
     fun enrichWith(metadata: VideoMetadata) {
         status = metadata.status
         progression = metadata.progression
         youtubeId = metadata.youtubeId
+        descriptionStatus = metadata.descriptionStatus
+        thumbnailStatus = metadata.thumbnailStatus
     }
 
     /**
@@ -40,8 +44,6 @@ data class VideoInfo (
         IN_PROGRESS,
         /** Setting thumbnail in progress  */
         THUMBNAIL,
-        /** Pushing description and thumbnail onto a video already online */
-        METADATA,
         /** Upload done, youtubeId should be set  */
         DONE,
         /** If something went wrong */

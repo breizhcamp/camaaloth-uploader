@@ -22,6 +22,7 @@ import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.session.PlaylistStore
 import org.breizhcamp.video.uploader.shared.session.SelectedPlaylist
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
+import org.breizhcamp.video.uploader.video.domain.PushStatus
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.breizhcamp.video.uploader.video.repository.YoutubeLibrary
 import org.junit.jupiter.api.BeforeEach
@@ -242,18 +243,64 @@ class YoutubeServiceTest {
     }
 
     @Test
-    fun `should leave the recorded status alone once the metadata is pushed`() {
+    fun `should record a pushed description without touching the upload status`() {
         val video = videoOnline(thumbnail = null)
         `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
 
         service.pushDescription(video)
 
         assertThat(video.status).isEqualTo(VideoInfo.Status.DONE)
-        verify(videoService, never()).updateVideo(video)
+        assertThat(video.descriptionStatus).isEqualTo(PushStatus.DONE)
+        verify(videoService).updateVideo(video)
     }
 
     @Test
-    fun `should report a failure without touching the file on disk`() {
+    fun `should leave the status alone when there was nothing to push`() {
+        val video = videoOnline(thumbnail = null)
+        `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "   "))
+
+        service.pushDescription(video)
+
+        assertThat(video.descriptionStatus).isEqualTo(PushStatus.NOT_STARTED)
+    }
+
+    @Test
+    fun `should record a pushed thumbnail`() {
+        val video = videoOnline(thumbnail = Paths.get("videos/talk/thumb.png"))
+
+        service.pushThumbnail(video)
+
+        assertThat(video.thumbnailStatus).isEqualTo(PushStatus.DONE)
+        assertThat(video.descriptionStatus).isEqualTo(PushStatus.NOT_STARTED)
+    }
+
+    @Test
+    fun `should skip the videos whose description already made it`() {
+        val pushed = videoOnline(null).apply { descriptionStatus = PushStatus.DONE }
+        val pending = videoOnline(null).apply { youtubeId = "yt-2" }
+        `when`(videoService.list()).thenReturn(listOf(pushed, pending))
+        `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
+
+        service.syncAllDescriptions()
+
+        verify(batchProgress).add(DESCRIPTIONS_BATCH, "Envoi des descriptions", 1)
+        verify(youtubeLibrary, timeout(1000)).updateDescription("yt-2", "Le résumé")
+        verify(youtubeLibrary, never()).updateDescription("yt-1", "Le résumé")
+    }
+
+    @Test
+    fun `should skip the videos whose thumbnail already made it`() {
+        val pushed = videoOnline(Paths.get("videos/talk/thumb.png")).apply { thumbnailStatus = PushStatus.DONE }
+        `when`(videoService.list()).thenReturn(listOf(pushed))
+
+        service.syncAllThumbnails()
+
+        verify(batchProgress).add(THUMBNAILS_BATCH, "Envoi des miniatures", 0)
+        verify(youtubeLibrary, never()).uploadThumbnail(pushed)
+    }
+
+    @Test
+    fun `should record a failed push so it shows again after a restart`() {
         val video = videoOnline(thumbnail = null)
         `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
         doThrow(IllegalStateException("YouTube does not know any video [yt-1]"))
@@ -261,8 +308,9 @@ class YoutubeServiceTest {
 
         service.pushDescription(video)
 
-        assertThat(video.status).isEqualTo(VideoInfo.Status.FAILED)
-        verify(videoService, never()).updateVideo(video)
+        assertThat(video.descriptionStatus).isEqualTo(PushStatus.FAILED)
+        assertThat(video.status).isEqualTo(VideoInfo.Status.DONE)
+        verify(videoService).updateVideo(video)
     }
 
     @Test

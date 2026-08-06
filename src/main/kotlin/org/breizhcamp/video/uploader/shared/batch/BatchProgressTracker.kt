@@ -38,6 +38,10 @@ class BatchProgressTracker(
      * an operation that knows its size upfront.
      */
     fun add(id: String, label: String, count: Int) {
+        //nothing to do means no bar at all: an empty batch would never be stepped, so it would sit
+        //at 0 / 0 for ever
+        if (count <= 0) return
+
         batches.compute(id) { _, current ->
             current?.copy(total = current.total + count) ?: BatchProgress(id, label, done = 0, total = count)
         }

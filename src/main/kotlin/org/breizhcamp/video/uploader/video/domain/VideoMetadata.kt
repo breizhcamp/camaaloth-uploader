@@ -12,4 +12,7 @@ data class VideoMetadata(
     val status: VideoInfo.Status,
     val progression: BigDecimal?,
     val youtubeId: String?,
+    /** Absent from the files written before these existed, which means nothing was pushed yet */
+    val descriptionStatus: PushStatus = PushStatus.NOT_STARTED,
+    val thumbnailStatus: PushStatus = PushStatus.NOT_STARTED,
 )

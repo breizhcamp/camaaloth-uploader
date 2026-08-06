@@ -76,6 +76,22 @@ class BatchProgressTrackerTest {
     }
 
     @Test
+    fun `should not open a batch that has nothing to do`() {
+        tracker.add("thumbnails", "Envoi des miniatures", 0)
+
+        assertThat(tracker.running()).isEmpty()
+    }
+
+    @Test
+    fun `should leave a running batch alone when nothing is added to it`() {
+        tracker.add("uploads", "Envoi des vidéos", 2)
+
+        tracker.add("uploads", "Envoi des vidéos", 0)
+
+        assertThat(tracker.running().single().total).isEqualTo(2)
+    }
+
+    @Test
     fun `should drop a batch that gave up half way`() {
         tracker.add("thumbs", "Génération des miniatures", 25)
         tracker.step("thumbs")
