@@ -58,8 +58,21 @@ dans `assets/`.
 Copier le modèle de thumbnails dans `assets/thumb.svg`.
 Il doit contenir les chaines `TitreTalk` et `SpeakersTalk` qui seront remplacé par le générateur
 
-La génération est un batch séparé de l'application web. Depuis l'IDE, lancer la classe
-`org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt` ; en ligne de commande, à partir du jar :
+La génération est un batch séparé de l'application web :
+
+```bash
+./gradlew thumb
+```
+
+Les options se passent via `--args` :
+
+```bash
+./gradlew thumb --args="--camaaloth-uploader.recordingDir=/Volumes/BrzhCampZ1/2026"
+./gradlew thumb --args="--inkscape-path=/chemin/vers/inkscape"
+```
+
+Depuis l'IDE, lancer la classe `org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt`. À partir du
+jar :
 
 ```bash
 java -Dloader.main=org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt \
@@ -67,7 +80,8 @@ java -Dloader.main=org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt \
   org.springframework.boot.loader.launch.PropertiesLauncher
 ```
 
-Une vignette `thumb.png` est écrite dans le répertoire de chaque talk, sauf si elle existe déjà.
+Une vignette `thumb.png` de 1280x720 est écrite dans le répertoire de chaque talk, sauf si elle
+existe déjà : supprimer le fichier pour le régénérer.
 
 La génération appelle Inkscape. Son chemin est détecté automatiquement (`Inkscape.app` sur macOS,
 `/usr/bin/inkscape` sinon, puis le `PATH`) et peut être forcé :

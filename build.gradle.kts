@@ -61,3 +61,14 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+/**
+ * Thumbnail generation, a batch separate from the web application.
+ * Options go through --args, e.g. ./gradlew thumb --args="--inkscape-path=/usr/bin/inkscape"
+ */
+tasks.register<JavaExec>("thumb") {
+    group = "application"
+    description = "Generate the thumbnail of every talk into its recording directory"
+    mainClass = "org.breizhcamp.video.uploader.thumb.ThumbGeneratorKt"
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
