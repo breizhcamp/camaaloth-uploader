@@ -13,4 +13,5 @@ if [ ! -f "${media}" ]; then
 fi
 
 echo "==== ${media}"
-ffmpeg -hide_banner -i "${media}" -af ebur128=framelog=verbose -f null - 2>&1
+# peak=true, sinon la section True peak du rapport n'est tout simplement pas produite
+ffmpeg -hide_banner -i "${media}" -af ebur128=framelog=verbose:peak=true -f null - 2>&1
