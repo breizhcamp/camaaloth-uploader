@@ -334,7 +334,7 @@
 									<tr>
 										<th>Nom du répertoire</th>
 										<th style="width: 200px;">État</th>
-										<th style="width: 100px;" class="text-center">Actions</th>
+										<th style="width: 140px;" class="text-center">Actions</th>
 									</tr>
 									</thead>
 									<tbody>
@@ -386,33 +386,35 @@
 												</span>
 											</div>
 										</td>
-										<td class="text-center">
-											<button type="button" 
-											        title="{{canUpload() ? 'Upload' : 'Sélectionner une playlist'}}" 
-											        class="btn btn-sm btn-sm-modern me-1"
-											        ng-class="{'btn-success': canUpload(), 'btn-secondary': !canUpload()}"
-													ng-click="upload(video)" 
-													ng-show="video.status == 'NOT_STARTED' || video.status == 'FAILED'" 
-													ng-disabled="!canUpload()"
-													th:if="${connected}">
-												<i class="fas fa-cloud-upload-alt"></i>
-											</button>
+										<td>
+											<div class="d-flex gap-1 justify-content-center flex-nowrap">
+												<button type="button" 
+												        title="{{canUpload() ? 'Upload' : 'Sélectionner une playlist'}}" 
+												        class="btn btn-sm btn-sm-modern"
+												        ng-class="{'btn-success': canUpload(), 'btn-secondary': !canUpload()}"
+														ng-click="upload(video)" 
+														ng-show="video.status == 'NOT_STARTED' || video.status == 'FAILED'" 
+														ng-disabled="!canUpload()"
+														th:if="${connected}">
+													<i class="fas fa-cloud-upload-alt"></i>
+												</button>
 
-											<button type="button"
-											        title="Renvoyer description et miniature"
-											        class="btn btn-outline-primary btn-sm btn-sm-modern me-1"
-											        ng-click="syncMetadata(video)"
-											        ng-show="video.youtubeId"
-											        th:if="${connected}">
-												<i class="fas fa-sync"></i>
-											</button>
+												<button type="button"
+												        title="Renvoyer description et miniature"
+												        class="btn btn-outline-primary btn-sm btn-sm-modern"
+												        ng-click="syncMetadata(video)"
+												        ng-show="video.youtubeId"
+												        th:if="${connected}">
+													<i class="fas fa-sync"></i>
+												</button>
 
-											<a ng-show="video.youtubeId" 
-											   ng-href="https://www.youtube.com/watch?v={{video.youtubeId}}" 
-											   class="btn btn-primary btn-sm btn-sm-modern" 
-											   target="_blank" title="YouTube">
-												<i class="fab fa-youtube"></i>
-											</a>
+												<a ng-show="video.youtubeId" 
+												   ng-href="https://www.youtube.com/watch?v={{video.youtubeId}}" 
+												   class="btn btn-primary btn-sm btn-sm-modern" 
+												   target="_blank" title="YouTube">
+													<i class="fab fa-youtube"></i>
+												</a>
+											</div>
 										</td>
 									</tr>
 									</tbody>
