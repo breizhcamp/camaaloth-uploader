@@ -5,6 +5,7 @@ import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
 import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
+import org.breizhcamp.video.uploader.shared.config.PathsReport
 import org.breizhcamp.video.uploader.video.service.VideoService
 import org.breizhcamp.video.uploader.video.service.YoutubeService
 import org.springframework.stereotype.Controller
@@ -22,6 +23,7 @@ class HomeController(
     private val youtubeService: YoutubeService,
     private val youtubeSession: YoutubeSession,
     private val batchProgress: BatchProgressTracker,
+    private val pathsReport: PathsReport,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -42,6 +44,8 @@ class HomeController(
         //so a page loaded mid batch shows the bars right away, without waiting for the next event
         model["batches"] = batchProgress.running()
         model["ytSession"] = youtubeSession
+        //grouped here rather than in the template, Thymeleaf has no comfortable way to group a list
+        model["paths"] = pathsReport.entries().groupBy { it.group }
 
         return "index"
     }

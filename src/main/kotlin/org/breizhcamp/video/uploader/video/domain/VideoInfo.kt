@@ -19,6 +19,8 @@ data class VideoInfo (
     var playlistId: String? = null,
     var descriptionStatus: PushStatus = PushStatus.NOT_STARTED,
     var thumbnailStatus: PushStatus = PushStatus.NOT_STARTED,
+    /** Taken from the schedule, shown when hovering the row. Not persisted. */
+    var description: String? = null,
 ){
     fun enrichWith(metadata: VideoMetadata) {
         status = metadata.status

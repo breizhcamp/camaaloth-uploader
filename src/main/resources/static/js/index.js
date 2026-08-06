@@ -16,7 +16,7 @@ $(function() {
 });
 
 angular.module('videosApp', [])
-.controller('VideoListCtrl', function($scope) {
+.controller('VideoListCtrl', function($scope, $timeout) {
 	// -----       WebSockets     ------
 	var socket = new SockJS("/stomp");
 	var stompClient = Stomp.over(socket);
@@ -219,6 +219,20 @@ angular.module('videosApp', [])
 	$scope.filtering = function() {
 		var f = $scope.filters;
 		return !!(f.name || f.video || f.description || f.thumbnail);
+	}
+
+	// clic sur une ligne : la description dans une fenêtre, l'infobulle native tardait trop
+	$scope.showDetail = function(video) {
+		$scope.detail = video;
+		// après le cycle de rendu, sinon la fenêtre s'ouvre sur le contenu précédent
+		$timeout(function() {
+			bootstrap.Modal.getOrCreateInstance(document.getElementById('video-modal')).show();
+		});
+	}
+
+	// les noms de répertoires contiennent espaces, parenthèses et virgules : à encoder
+	$scope.thumbUrl = function(video) {
+		return '/thumb?dir=' + encodeURIComponent(video.dirName);
 	}
 
 	// combien de vidéos en ligne attendent encore cet envoi, ce que le bouton global traitera
