@@ -202,12 +202,12 @@
 								</button>
 							</form>
 
-							<form method="post" th:action="@{/generateThumbs}">
+							<form method="post" th:action="@{/generateThumbs}" ng-submit="thumbStarting = true">
 								<button th:if="${dirExists}" type="submit" id="generateThumbs"
 								        class="btn btn-outline-primary btn-modern w-100"
-								        ng-disabled="isRunning('thumbs')">
-									<i class="fas fa-image" ng-hide="isRunning('thumbs')"></i>
-									<i class="fas fa-spinner fa-spin" ng-show="isRunning('thumbs')"></i>
+								        ng-disabled="isRunning('thumbs') || thumbStarting">
+									<i class="fas fa-image" ng-hide="isRunning('thumbs') || thumbStarting"></i>
+									<i class="fas fa-spinner fa-spin" ng-show="isRunning('thumbs') || thumbStarting"></i>
 									Générer les miniatures
 								</button>
 							</form>
