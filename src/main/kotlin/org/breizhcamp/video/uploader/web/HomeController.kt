@@ -28,12 +28,30 @@ class HomeController(
     fun home(model: Model): String {
         val videosDir = fileService.recordingDir
 
+        youtubeService.loadSessionIfNeeded()
+        val connected = youtubeService.isConnected()
+
         model["videosDir"] = videosDir
         model["dirExists"] = Files.isDirectory(videosDir)
-        model["connected"] = youtubeService.isConnected()
+        model["connected"] = connected
+        //a credential is stored but unusable: only deleting it can unblock the authentication
+        model["staleCredential"] = !connected && youtubeService.hasStoredCredential()
+        model["ytProblem"] = ytProblem(connected)
         model["ytSession"] = youtubeSession
 
         return "index"
+    }
+
+    /**
+     * Why the YouTube panel cannot be used even though we are connected, so the page can explain it
+     * and offer a way out instead of showing an empty card.
+     */
+    private fun ytProblem(connected: Boolean): String? = when {
+        !connected -> null
+        youtubeSession.channels.isNullOrEmpty() -> "NO_CHANNEL"
+        youtubeSession.currentChannel == null -> "NO_CHANNEL_SELECTED"
+        youtubeSession.playlists.isNullOrEmpty() -> "NO_PLAYLIST"
+        else -> null
     }
 
     @PostMapping("/createDir")

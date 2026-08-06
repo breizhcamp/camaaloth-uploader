@@ -12,6 +12,7 @@ import org.breizhcamp.video.uploader.event.domain.Event
 import org.breizhcamp.video.uploader.shared.config.YoutubeAuthConfig.Companion.YT_USER_ID
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.springframework.stereotype.Repository
+import java.io.IOException
 
 @Repository
 class YoutubeLibrary(
@@ -89,16 +90,51 @@ class YoutubeLibrary(
         .setApplicationName("yt-uploader/1.0")
         .build()
 
+    /**
+     * Load the stored credential, refreshing the access token when it is about to expire.
+     *
+     * The refreshed token is written back to the data store by the refresh listener the flow
+     * registers on every credential it creates.
+     */
     private fun getCurrentCred(): Credential? {
-        return ytAuthFlow.loadCredential(YT_USER_ID)?.takeIf {
-            it.expiresInSeconds != null && it.expiresInSeconds >= 10
+        val credential = ytAuthFlow.loadCredential(YT_USER_ID) ?: return null
+
+        val expiresInSeconds = credential.expiresInSeconds
+        if (expiresInSeconds != null && expiresInSeconds >= MIN_TOKEN_VALIDITY_SECONDS) return credential
+
+        if (credential.refreshToken == null) {
+            logger.info { "Access token expired and no refresh token available, a new authentication is needed" }
+            return null
+        }
+
+        return try {
+            if (credential.refreshToken()) credential
+            else {
+                logger.warn { "Google refused to refresh the access token, a new authentication is needed" }
+                null
+            }
+        } catch (e: IOException) {
+            logger.warn(e) { "Unable to refresh the access token" }
+            null
         }
     }
 
     fun isConnected(): Boolean = getCurrentCred() != null
 
+    /** True when a credential sits in the data store, whether or not it is still usable */
+    fun hasStoredCredential(): Boolean = ytAuthFlow.credentialDataStore?.containsKey(YT_USER_ID) ?: false
+
+    /** Drop the stored credential, so the next authentication starts from scratch */
+    fun clearCredential() {
+        ytAuthFlow.credentialDataStore?.delete(YT_USER_ID)
+        logger.info { "Stored YouTube credential deleted" }
+    }
+
 
     companion object {
+        /** Refresh the access token when it has less than this left, to survive a slow upload start */
+        private const val MIN_TOKEN_VALIDITY_SECONDS = 60L
+
         /**
          * Make a title compatible with Youtube : 100 chars with no < or >.
          * https://developers.google.com/youtube/v3/docs/videos#snippet.title

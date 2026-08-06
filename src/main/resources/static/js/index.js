@@ -1,10 +1,18 @@
 $(function() {
-	var ytAuth = $('#yt-auth');
-	ytAuth.attr('href', ytAuth.attr('href') + "?baseUrl=" + encodeURI(window.location.href));
+	$('.yt-auth-link').each(function () {
+		var link = $(this);
+		link.attr('href', link.attr('href') + "?baseUrl=" + encodeURIComponent(window.location.href));
+	});
 
 	$('#select-playlist').on('change', function () {
 		$('#form-playlist').submit();
 	});
+
+	// only rendered when the YouTube panel is connected but unusable
+	var problem = document.getElementById('yt-problem-modal');
+	if (problem) {
+		new bootstrap.Modal(problem).show();
+	}
 });
 
 angular.module('videosApp', [])

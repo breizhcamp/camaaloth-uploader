@@ -229,27 +229,44 @@
 						</h3>
 
 						<div th:if="${!connected}">
+							<div th:if="${staleCredential}" class="alert alert-warning py-2 px-3 mb-3">
+								<i class="fas fa-exclamation-triangle"></i>
+								Un token YouTube est enregistré sur le serveur mais Google ne l'accepte plus.
+								Effacez-le avant de vous réauthentifier.
+								<form method="post" th:action="@{/yt/disconnect}" class="mt-2">
+									<button type="submit" id="yt-disconnect" class="btn btn-outline-danger btn-sm btn-modern">
+										<i class="fas fa-trash"></i> Effacer le token enregistré
+									</button>
+								</form>
+							</div>
 							<p class="text-muted mb-3">Connectez-vous pour uploader vos vidéos</p>
-							<a th:href="@{'/yt/auth'}" id="yt-auth" class="btn btn-danger btn-modern">
+							<a th:href="@{'/yt/auth'}" id="yt-auth" class="yt-auth-link btn btn-danger btn-modern">
 								<i class="fas fa-sign-in-alt"></i> S'authentifier sur YouTube
 							</a>
 						</div>
 
 						<div th:if="${connected}">
-							<div th:if="${ytSession.currentChannel}" class="youtube-connected">
+								<div class="youtube-connected">
 								<div class="user-profile mb-3">
-									<img th:src="${ytSession.currentChannel.snippet.thumbnails.default.url}" 
+									<img th:if="${ytSession.currentChannel}" th:src="${ytSession.currentChannel.snippet.thumbnails.default.url}"
 									     class="user-avatar" alt="Avatar">
 									<div class="flex-grow-1">
-										<h6 class="mb-1" th:text="${ytSession.currentChannel.snippet.title}"></h6>
-										<small class="text-muted">Chaîne connectée</small>
+										<h6 class="mb-1" th:if="${ytSession.currentChannel}" th:text="${ytSession.currentChannel.snippet.title}"></h6>
+										<h6 class="mb-1" th:unless="${ytSession.currentChannel}">Compte YouTube connecté</h6>
+										<small class="text-muted" th:if="${ytSession.currentChannel}">Chaîne connectée</small>
+										<small class="text-muted" th:unless="${ytSession.currentChannel}">Aucune chaîne sélectionnée</small>
 									</div>
-									<a th:href="@{'/yt/auth'}" class="btn btn-outline-secondary btn-sm btn-modern">
+									<a th:href="@{'/yt/auth'}" class="yt-auth-link btn btn-outline-secondary btn-sm btn-modern">
 										<i class="fas fa-user-cog"></i> Changer
 									</a>
+									<form method="post" th:action="@{/yt/disconnect}" class="ms-2">
+										<button type="submit" class="btn btn-outline-danger btn-sm btn-modern">
+											<i class="fas fa-sign-out-alt"></i> Déconnecter
+										</button>
+									</form>
 								</div>
 
-								<div class="form-compact">
+								<div th:if="${ytSession.currentChannel}" class="form-compact">
 									<form method="post" th:action="@{/yt/curPlaylist}" id="form-playlist">
 										<label for="select-playlist" class="form-label">
 											<i class="fas fa-list"></i> Playlist
@@ -389,6 +406,44 @@
 							<p class="mt-2 text-muted">Chargement des vidéos...</p>
 						</div>
 					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Raised when the YouTube panel is connected but unusable -->
+	<div th:if="${ytProblem}" class="modal fade" id="yt-problem-modal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">
+						<i class="fas fa-exclamation-triangle text-warning"></i> YouTube
+					</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+				</div>
+				<div class="modal-body">
+					<p th:if="${ytProblem == 'NO_PLAYLIST'}" class="mb-0">
+						Il n'y a pas de playlist, vérifiez qu'il en existe bien une.
+						Sinon, êtes-vous sûr d'être bien connecté&nbsp;?
+					</p>
+					<p th:if="${ytProblem == 'NO_CHANNEL'}" class="mb-0">
+						Aucune chaîne YouTube n'a été trouvée sur ce compte.
+						Vérifiez que le compte utilisé est le bon, êtes-vous sûr d'être bien connecté&nbsp;?
+					</p>
+					<p th:if="${ytProblem == 'NO_CHANNEL_SELECTED'}" class="mb-0">
+						Ce compte possède plusieurs chaînes YouTube&nbsp;: aucune n'a pu être choisie
+						automatiquement. Reconnectez-vous avec le compte de la chaîne à utiliser.
+					</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-outline-secondary btn-modern" data-bs-dismiss="modal">
+						Fermer
+					</button>
+					<form method="post" th:action="@{/yt/reconnect}">
+						<button type="submit" id="yt-reconnect" class="btn btn-danger btn-modern">
+							<i class="fas fa-rotate-right"></i> Se déconnecter et se reconnecter
+						</button>
+					</form>
 				</div>
 			</div>
 		</div>

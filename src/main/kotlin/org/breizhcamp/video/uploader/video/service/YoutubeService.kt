@@ -9,6 +9,7 @@ import jakarta.annotation.PreDestroy
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.shared.config.YoutubeAuthConfig
 import org.breizhcamp.video.uploader.shared.exception.UpdateException
+import org.breizhcamp.video.uploader.shared.session.YoutubeSession
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.breizhcamp.video.uploader.video.repository.YoutubeLibrary
 import org.breizhcamp.video.uploader.web.YoutubeController
@@ -28,8 +29,10 @@ class YoutubeService(
     private val eventService: EventService,
     private val ytAuthFlow: GoogleAuthorizationCodeFlow,
     private val template: SimpMessagingTemplate,
-    private val youtubeLibrary: YoutubeLibrary
+    private val youtubeLibrary: YoutubeLibrary,
+    private val ytSession: YoutubeSession,
 ) {
+    private val logger = KotlinLogging.logger { }
     private lateinit var uploader: YtUploader
 
     @PostConstruct
@@ -43,11 +46,19 @@ class YoutubeService(
         uploader.shutdown()
     }
 
+    /**
+     * Build the Google consent URL.
+     *
+     * `prompt=select_account consent` is required: without it Google silently re-approves the
+     * account already granted, which prevents switching account and, more importantly, makes it
+     * skip the refresh token in its answer.
+     */
     fun getAuthUrl(redirectUrl: String): String =
         ytAuthFlow
             .newAuthorizationUrl()
             .setRedirectUri(redirectUrl)
             .setAccessType("offline")
+            .set("prompt", "select_account consent")
             .build()
 
     fun handleAuth(code: String, redirectUrl: String) {
@@ -63,9 +74,57 @@ class YoutubeService(
 
     fun getPlaylistsBy(channelId: String) = youtubeLibrary.getPlaylists(channelId = channelId)
 
+    /**
+     * Fill the session with the channels of the connected account, and with the playlists of the
+     * channel when the account owns exactly one. Nothing is selected for the user otherwise, an
+     * upload would end up on the wrong channel.
+     */
+    fun loadSession() {
+        val channels = youtubeLibrary.getChannels()
+        ytSession.channels = channels
+
+        if (channels.size != 1) {
+            logger.info { "Account owns ${channels.size} channels, none selected" }
+            return
+        }
+        val channel = channels.first()
+        ytSession.currentChannel = channel
+        ytSession.playlists = youtubeLibrary.getPlaylists(channelId = channel.id)
+    }
+
+    /**
+     * Load the session unless it already holds something. The session lives in memory only, so it
+     * is empty again after every restart even though the credential is still stored.
+     */
+    fun loadSessionIfNeeded() {
+        if (ytSession.channels != null || !isConnected()) return
+        try {
+            loadSession()
+        } catch (e: Exception) {
+            logger.warn(e) { "Unable to load the YouTube session" }
+        }
+    }
+
     fun isConnected(): Boolean = youtubeLibrary.isConnected()
 
+    /** True when a credential is stored, even an expired or revoked one */
+    fun hasStoredCredential(): Boolean = youtubeLibrary.hasStoredCredential()
+
+    /** Delete the stored credential, the only way out when the token is no longer accepted by Google */
+    fun disconnect() {
+        logger.info { "Deleting the stored YouTube credential" }
+        youtubeLibrary.clearCredential()
+    }
+
     fun saveToken(token: GoogleTokenResponse) {
+        if (token.refreshToken == null) {
+            //Google only returns a refresh token on the first authorization: keep the stored one
+            //instead of overwriting it with null, which would make the session die after an hour.
+            ytAuthFlow.loadCredential(YoutubeAuthConfig.YT_USER_ID)?.refreshToken?.let {
+                logger.warn { "Google returned no refresh token, keeping the stored one" }
+                token.refreshToken = it
+            }
+        }
         ytAuthFlow.createAndStoreCredential(token, YoutubeAuthConfig.YT_USER_ID)
     }
 
