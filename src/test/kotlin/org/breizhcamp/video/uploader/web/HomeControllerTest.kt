@@ -5,6 +5,7 @@ import com.google.api.services.youtube.model.Playlist
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
+import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.video.service.VideoService
 import org.breizhcamp.video.uploader.video.service.YoutubeService
 import org.junit.jupiter.api.BeforeEach
@@ -23,11 +24,13 @@ class HomeControllerTest {
     private val fileService = mock(FileService::class.java)
     private val youtubeService = mock(YoutubeService::class.java)
     private val ytSession = YoutubeSession()
+    private val batchProgress = mock(BatchProgressTracker::class.java)
     private lateinit var mockMvc: MockMvc
 
     @BeforeEach
     fun setUp() {
         `when`(fileService.recordingDir).thenReturn(Paths.get("videos"))
+        `when`(batchProgress.running()).thenReturn(emptyList())
 
         mockMvc = MockMvcBuilders.standaloneSetup(
             HomeController(
@@ -36,6 +39,7 @@ class HomeControllerTest {
                 mock(VideoService::class.java),
                 youtubeService,
                 ytSession,
+                batchProgress,
             )
         ).build()
     }

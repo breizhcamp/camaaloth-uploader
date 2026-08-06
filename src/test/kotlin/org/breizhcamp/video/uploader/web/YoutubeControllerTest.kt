@@ -104,15 +104,23 @@ class YoutubeControllerTest {
     }
 
     @Test
-    fun `should queue every video already online`() {
-        mockMvc.perform(post("/yt/syncMetadataAll"))
+    fun `should queue the description of every video already online`() {
+        mockMvc.perform(post("/yt/syncDescriptionsAll"))
             .andExpect(status().is3xxRedirection())
 
-        verify(youtubeService).syncAllMetadata()
+        verify(youtubeService).syncAllDescriptions()
     }
 
     @Test
-    fun `should queue the metadata of a single video`() {
+    fun `should queue the thumbnail of every video already online`() {
+        mockMvc.perform(post("/yt/syncThumbnailsAll"))
+            .andExpect(status().is3xxRedirection())
+
+        verify(youtubeService).syncAllThumbnails()
+    }
+
+    @Test
+    fun `should queue the description of a single video`() {
         val dirName = "24.Amphi D.13-30 - Un talk (Alice Simon) - 1183944"
         val video = VideoInfo(
             path = Paths.get(dirName, "1080p.mp4"),
@@ -124,14 +132,16 @@ class YoutubeControllerTest {
         `when`(fileService.recordingDir).thenReturn(Paths.get("videos"))
         `when`(videoService.getInformationsFrom(Paths.get("videos", dirName))).thenReturn(video)
 
-        controller.syncMetadata(dirName)
+        controller.syncDescription(dirName)
+        controller.syncThumbnail(dirName)
 
-        verify(youtubeService).syncMetadata(video)
+        verify(youtubeService).syncDescription(video)
+        verify(youtubeService).syncThumbnail(video)
     }
 
     @Test
     fun `should ignore a directory carrying no event id`() {
-        controller.syncMetadata("un répertoire sans identifiant")
+        controller.syncDescription("un répertoire sans identifiant")
 
         verifyNoInteractions(videoService)
     }

@@ -8,6 +8,7 @@ import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.shared.config.YoutubeAuthConfig
+import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.exception.UpdateException
 import org.breizhcamp.video.uploader.shared.session.PlaylistStore
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
@@ -29,6 +30,10 @@ import java.util.concurrent.LinkedBlockingDeque
 /** Value the playlist dropdown sends when the user picks no playlist at all */
 private const val NO_PLAYLIST = "none"
 
+const val DESCRIPTIONS_BATCH = "descriptions"
+const val THUMBNAILS_BATCH = "thumbnails"
+const val UPLOADS_BATCH = "uploads"
+
 @Service
 class YoutubeService(
     private val videoService: VideoService,
@@ -38,6 +43,7 @@ class YoutubeService(
     private val youtubeLibrary: YoutubeLibrary,
     private val ytSession: YoutubeSession,
     private val playlistStore: PlaylistStore,
+    private val batchProgress: BatchProgressTracker,
 ) {
     private val logger = KotlinLogging.logger { }
     private lateinit var uploader: YtUploader
@@ -187,48 +193,80 @@ class YoutubeService(
     }
 
     /**
-     * Queue the metadata of an already uploaded video to be pushed onto Youtube.
+     * Queue the description of an already uploaded video to be pushed onto Youtube.
      *
      * Kept off the uploader thread so a catch-up does not wait behind a queue of uploads, and off
      * the request thread so the whole schedule can be pushed without the browser timing out.
      */
-    fun syncMetadata(videoInfo: VideoInfo) {
-        metadataSyncer.execute { pushMetadata(videoInfo) }
+    fun syncDescription(videoInfo: VideoInfo) {
+        metadataSyncer.execute {
+            pushDescription(videoInfo)
+            batchProgress.step(DESCRIPTIONS_BATCH)
+        }
+    }
+
+    /** Same, for the thumbnail. Kept apart from the description, each call costs Youtube quota */
+    fun syncThumbnail(videoInfo: VideoInfo) {
+        metadataSyncer.execute {
+            pushThumbnail(videoInfo)
+            batchProgress.step(THUMBNAILS_BATCH)
+        }
     }
 
     /** Queue every video already online, whatever its recorded status */
-    fun syncAllMetadata() {
-        videoService.list()
-            .filter { it.youtubeId != null }
-            .also { logger.info { "Pushing the metadata of ${it.size} videos" } }
-            .forEach { syncMetadata(it) }
+    fun syncAllDescriptions() {
+        onlineVideos()
+            .also { logger.info { "Pushing the description of ${it.size} videos" } }
+            .also { batchProgress.add(DESCRIPTIONS_BATCH, "Envoi des descriptions", it.size) }
+            .forEach { syncDescription(it) }
     }
 
-    /**
-     * Push the description and the thumbnail of a video onto Youtube, right now.
-     *
-     * The broadcast status is not written to disk: the upload stays DONE, a failure here must not
-     * leave the video stuck in an intermediate state on the next start.
-     */
-    fun pushMetadata(videoInfo: VideoInfo) {
+    fun syncAllThumbnails() {
+        onlineVideos()
+            .also { logger.info { "Pushing the thumbnail of ${it.size} videos" } }
+            .also { batchProgress.add(THUMBNAILS_BATCH, "Envoi des miniatures", it.size) }
+            .forEach { syncThumbnail(it) }
+    }
+
+    private fun onlineVideos() = videoService.list().filter { it.youtubeId != null }
+
+    /** Push the description of a video onto Youtube, right now */
+    fun pushDescription(videoInfo: VideoInfo) {
         val youtubeId = videoInfo.youtubeId ?: return
-        val previousStatus = videoInfo.status
 
-        try {
-            broadcast(videoInfo, VideoInfo.Status.METADATA)
-
+        push(videoInfo, VideoInfo.Status.METADATA, "description") {
             eventService.findEventBy(id = requireNotNull(videoInfo.eventId))
                 ?.description
                 ?.takeIf { it.isNotBlank() }
                 ?.let { youtubeLibrary.updateDescription(youtubeId, it) }
                 ?: logger.info { "[${videoInfo.eventId}] No description in the schedule, skipped" }
+        }
+    }
 
+    /** Push the thumbnail of a video onto Youtube, right now */
+    fun pushThumbnail(videoInfo: VideoInfo) {
+        if (videoInfo.youtubeId == null) return
+
+        push(videoInfo, VideoInfo.Status.THUMBNAIL, "thumbnail") {
             if (videoInfo.thumbnail != null) youtubeLibrary.uploadThumbnail(videoInfo)
             else logger.info { "[${videoInfo.eventId}] No thumbnail on disk, skipped" }
+        }
+    }
 
+    /**
+     * Run one push, showing it in the list while it lasts.
+     *
+     * The broadcast status is not written to disk: the upload stays DONE, a failure here must not
+     * leave the video stuck in an intermediate state on the next start.
+     */
+    private fun push(videoInfo: VideoInfo, status: VideoInfo.Status, what: String, block: () -> Unit) {
+        val previousStatus = videoInfo.status
+        try {
+            broadcast(videoInfo, status)
+            block()
             broadcast(videoInfo, previousStatus)
         } catch (e: Exception) {
-            logger.error(e) { "Unable to push the metadata of [${videoInfo.dirName}]" }
+            logger.error(e) { "Unable to push the $what of [${videoInfo.dirName}]" }
             broadcast(videoInfo, VideoInfo.Status.FAILED)
         }
     }
@@ -258,6 +296,7 @@ class YoutubeService(
 
         fun uploadVideo(videoInfo: VideoInfo) {
             videoToUpload.addLast(videoInfo)
+            batchProgress.add(UPLOADS_BATCH, "Envoi des vidéos", 1)
             videoInfo.status = VideoInfo.Status.WAITING
             updateVideo(videoInfo)
         }
@@ -362,6 +401,8 @@ class YoutubeService(
                         if (nbErrors > 5) {
                             throw RuntimeException("At least 5 videos failed to upload, stopping thread")
                         }
+                    } finally {
+                        batchProgress.step(UPLOADS_BATCH)
                     }
                 }
             } catch (e: InterruptedException) {

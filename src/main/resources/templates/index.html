@@ -179,7 +179,7 @@
 			</div>
 		</div>
 
-		<div class="container">
+		<div class="container" ng-app="videosApp" ng-controller="VideoListCtrl">
 			<div class="row">
 				<!-- Local Section -->
 				<div class="col-md-6">
@@ -199,6 +199,16 @@
 								</button>
 								<button th:if="${dirExists}" type="submit" class="btn btn-secondary btn-modern w-100">
 									<i class="fas fa-redo"></i> Recréer les répertoires
+								</button>
+							</form>
+
+							<form method="post" th:action="@{/generateThumbs}">
+								<button th:if="${dirExists}" type="submit" id="generateThumbs"
+								        class="btn btn-outline-primary btn-modern w-100"
+								        ng-disabled="isRunning('thumbs')">
+									<i class="fas fa-image" ng-hide="isRunning('thumbs')"></i>
+									<i class="fas fa-spinner fa-spin" ng-show="isRunning('thumbs')"></i>
+									Générer les miniatures
 								</button>
 							</form>
 
@@ -299,19 +309,43 @@
 				</div>
 			</div>
 
+			<!-- Progress of the long running operations -->
+			<div class="row" ng-if="batches.length">
+				<div class="col-12">
+					<div class="section-card">
+						<div ng-repeat="b in batches" ng-class="{'mt-3': !$first}">
+							<div class="d-flex justify-content-between align-items-center mb-1">
+								<span class="fw-semibold"><i class="fas fa-spinner fa-spin"></i> {{b.label}}</span>
+								<small class="text-muted">{{b.done}} / {{b.total}}</small>
+							</div>
+							<div class="progress" style="height: 8px;">
+								<div class="progress-bar progress-bar-striped progress-bar-animated"
+								     role="progressbar" ng-style="{width: percent(b) + '%'}"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Video List Section -->
-			<div class="row" ng-app="videosApp">
-				<div class="col-12" ng-controller="VideoListCtrl">
+			<div class="row">
+				<div class="col-12">
 					<div class="section-card">
 						<div class="d-flex justify-content-between align-items-center mb-3">
 							<h3 class="section-title mb-0">
 								<i class="fas fa-video"></i> Liste des Vidéos
 							</h3>
 							<div class="d-flex gap-2">
-								<form method="post" th:action="@{/yt/syncMetadataAll}" th:if="${connected}">
+								<form method="post" th:action="@{/yt/syncDescriptionsAll}" th:if="${connected}">
 									<button type="submit" class="btn btn-outline-primary btn-modern"
-									        title="Renvoyer description et miniature de toutes les vidéos déjà en ligne">
-										<i class="fas fa-sync"></i> Pousser les métadonnées
+									        title="Renvoyer la description de toutes les vidéos déjà en ligne">
+										<i class="fas fa-align-left"></i> Pousser les descriptions
+									</button>
+								</form>
+								<form method="post" th:action="@{/yt/syncThumbnailsAll}" th:if="${connected}">
+									<button type="submit" class="btn btn-outline-primary btn-modern"
+									        title="Renvoyer la miniature de toutes les vidéos déjà en ligne">
+										<i class="fas fa-image"></i> Pousser les miniatures
 									</button>
 								</form>
 								<form method="post" th:action="@{/yt/uploadAll}" class="d-inline" onsubmit="return angular.element(this).scope().uploadAll()">
@@ -334,7 +368,7 @@
 									<tr>
 										<th>Nom du répertoire</th>
 										<th style="width: 200px;">État</th>
-										<th style="width: 140px;" class="text-center">Actions</th>
+										<th style="width: 180px;" class="text-center">Actions</th>
 									</tr>
 									</thead>
 									<tbody>
@@ -400,12 +434,21 @@
 												</button>
 
 												<button type="button"
-												        title="Renvoyer description et miniature"
+												        title="Renvoyer la description"
 												        class="btn btn-outline-primary btn-sm btn-sm-modern"
-												        ng-click="syncMetadata(video)"
+												        ng-click="syncDescription(video)"
 												        ng-show="video.youtubeId"
 												        th:if="${connected}">
-													<i class="fas fa-sync"></i>
+													<i class="fas fa-align-left"></i>
+												</button>
+
+												<button type="button"
+												        title="Renvoyer la miniature"
+												        class="btn btn-outline-primary btn-sm btn-sm-modern"
+												        ng-click="syncThumbnail(video)"
+												        ng-show="video.youtubeId"
+												        th:if="${connected}">
+													<i class="fas fa-image"></i>
 												</button>
 
 												<a ng-show="video.youtubeId" 
@@ -485,6 +528,7 @@
 	<script th:inline="javascript">
 		window.hasPlaylist = [[${connected && ytSession.curPlaylist != null}]];
 		window.currentPlaylist = [[${ytSession.curPlaylist?.snippet?.title}]];
+		window.batches = [[${batches}]];
 	</script>
 	<!-- Custom JS -->
 	<script th:src="@{'/js/index.js'}"></script>

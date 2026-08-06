@@ -4,6 +4,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
+import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.video.service.VideoService
 import org.breizhcamp.video.uploader.video.service.YoutubeService
 import org.springframework.stereotype.Controller
@@ -20,6 +21,7 @@ class HomeController(
     private val videoService: VideoService,
     private val youtubeService: YoutubeService,
     private val youtubeSession: YoutubeSession,
+    private val batchProgress: BatchProgressTracker,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -37,6 +39,8 @@ class HomeController(
         //a credential is stored but unusable: only deleting it can unblock the authentication
         model["staleCredential"] = !connected && youtubeService.hasStoredCredential()
         model["ytProblem"] = ytProblem(connected)
+        //so a page loaded mid batch shows the bars right away, without waiting for the next event
+        model["batches"] = batchProgress.running()
         model["ytSession"] = youtubeSession
 
         return "index"
