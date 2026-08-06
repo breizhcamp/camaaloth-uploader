@@ -363,18 +363,77 @@
 							</div>
 						</div>
 
+						<div ng-show="loaded" class="form-compact mb-3">
+							<div class="row g-2 align-items-end">
+								<div class="col">
+									<label class="form-label mb-1 small text-muted">Nom</label>
+									<input type="search" class="form-control form-control-sm" ng-model="filters.name"
+									       placeholder="Filtrer sur le nom du répertoire">
+								</div>
+								<div class="col-auto">
+									<label class="form-label mb-1 small text-muted">Vidéo</label>
+									<select class="form-select form-select-sm" ng-model="filters.video">
+										<option value="">Tous</option>
+										<option value="NOT_STARTED">À faire</option>
+										<option value="IN_PROGRESS">En cours</option>
+										<option value="DONE">Fait</option>
+										<option value="FAILED">Erreur</option>
+									</select>
+								</div>
+								<div class="col-auto">
+									<label class="form-label mb-1 small text-muted">Description</label>
+									<select class="form-select form-select-sm" ng-model="filters.description">
+										<option value="">Tous</option>
+										<option value="NOT_STARTED">À faire</option>
+										<option value="IN_PROGRESS">En cours</option>
+										<option value="DONE">Fait</option>
+										<option value="FAILED">Erreur</option>
+									</select>
+								</div>
+								<div class="col-auto">
+									<label class="form-label mb-1 small text-muted">Miniature</label>
+									<select class="form-select form-select-sm" ng-model="filters.thumbnail">
+										<option value="">Tous</option>
+										<option value="NOT_STARTED">À faire</option>
+										<option value="IN_PROGRESS">En cours</option>
+										<option value="DONE">Fait</option>
+										<option value="FAILED">Erreur</option>
+									</select>
+								</div>
+								<div class="col-auto">
+									<button type="button" class="btn btn-outline-secondary btn-sm btn-modern"
+									        ng-click="clearFilters()" ng-disabled="!filtering()">
+										<i class="fas fa-times"></i> Effacer
+									</button>
+								</div>
+							</div>
+							<small class="text-muted">{{visibleVideos().length}} / {{videos.length}} vidéos</small>
+						</div>
+
 						<div ng-show="loaded">
 							<div class="table-responsive">
 								<table class="table table-hover video-table">
 									<thead>
 									<tr>
-										<th>Nom du répertoire</th>
-										<th style="width: 200px;">État</th>
+										<th role="button" ng-click="sortBy('dirName')">
+											Nom du répertoire <i class="fas" ng-class="sortIcon('dirName')"></i>
+										</th>
+										<th style="width: 200px;">
+											<span role="button" class="me-3" title="Trier sur la vidéo" ng-click="sortBy('video')">
+												<i class="fas fa-film"></i> <i class="fas" ng-class="sortIcon('video')"></i>
+											</span>
+											<span role="button" class="me-3" title="Trier sur la description" ng-click="sortBy('description')">
+												<i class="fas fa-align-left"></i> <i class="fas" ng-class="sortIcon('description')"></i>
+											</span>
+											<span role="button" title="Trier sur la miniature" ng-click="sortBy('thumbnail')">
+												<i class="fas fa-image"></i> <i class="fas" ng-class="sortIcon('thumbnail')"></i>
+											</span>
+										</th>
 										<th style="width: 180px;" class="text-center">Actions</th>
 									</tr>
 									</thead>
 									<tbody>
-									<tr ng-repeat="video in videos">
+									<tr ng-repeat="video in visibleVideos()">
 										<td>
 											<i class="fas fa-video text-muted me-2"></i>
 											{{video.dirName}}

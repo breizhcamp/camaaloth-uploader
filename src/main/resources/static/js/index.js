@@ -144,6 +144,83 @@ angular.module('videosApp', [])
 		}
 	}
 
+	// ----- Filtrage et tri, entièrement côté navigateur -----
+
+	// l'ordre des états suit l'avancement, pas l'alphabet : trier remonte ce qu'il reste à faire
+	var STATE_RANK = {NOT_STARTED: 0, IN_PROGRESS: 1, FAILED: 2, DONE: 3};
+
+	function queryParam(name) {
+		var found = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+		return found ? decodeURIComponent(found[1].replace(/\+/g, ' ')) : '';
+	}
+
+	// l'état des filtres vit dans l'url, ce qui rend une vue rechargeable et partageable
+	$scope.filters = {
+		name: queryParam('nom'),
+		video: queryParam('video'),
+		description: queryParam('description'),
+		thumbnail: queryParam('miniature')
+	};
+	$scope.sort = {
+		field: queryParam('tri') || 'dirName',
+		asc: queryParam('sens') !== 'desc'
+	};
+
+	// la valeur sur laquelle une colonne filtre et trie
+	function valueOf(video, field) {
+		if (field === 'dirName') return (video.dirName || '').toLowerCase();
+		if (field === 'video') return $scope.videoState(video);
+		if (field === 'description') return video.descriptionStatus || 'NOT_STARTED';
+		return video.thumbnailStatus || 'NOT_STARTED';
+	}
+
+	function matches(video) {
+		var name = $scope.filters.name.toLowerCase();
+		if (name && valueOf(video, 'dirName').indexOf(name) === -1) return false;
+
+		var columns = ['video', 'description', 'thumbnail'];
+		for (var i = 0; i < columns.length; i++) {
+			var wanted = $scope.filters[columns[i]];
+			if (wanted && valueOf(video, columns[i]) !== wanted) return false;
+		}
+		return true;
+	}
+
+	function compare(a, b) {
+		var field = $scope.sort.field;
+		if (field === 'dirName') {
+			return valueOf(a, field).localeCompare(valueOf(b, field));
+		}
+		var rank = STATE_RANK[valueOf(a, field)] - STATE_RANK[valueOf(b, field)];
+		// à état égal, l'ordre alphabétique garde la liste stable
+		return rank !== 0 ? rank : valueOf(a, 'dirName').localeCompare(valueOf(b, 'dirName'));
+	}
+
+	$scope.visibleVideos = function() {
+		var kept = ($scope.videos || []).filter(matches);
+		kept.sort(compare);
+		return $scope.sort.asc ? kept : kept.reverse();
+	}
+
+	$scope.sortBy = function(field) {
+		if ($scope.sort.field === field) $scope.sort.asc = !$scope.sort.asc;
+		else { $scope.sort.field = field; $scope.sort.asc = true; }
+	}
+
+	$scope.sortIcon = function(field) {
+		if ($scope.sort.field !== field) return 'fa-sort text-muted opacity-50';
+		return $scope.sort.asc ? 'fa-sort-up' : 'fa-sort-down';
+	}
+
+	$scope.clearFilters = function() {
+		$scope.filters = {name: '', video: '', description: '', thumbnail: ''};
+	}
+
+	$scope.filtering = function() {
+		var f = $scope.filters;
+		return !!(f.name || f.video || f.description || f.thumbnail);
+	}
+
 	// combien de vidéos en ligne attendent encore cet envoi, ce que le bouton global traitera
 	$scope.pending = function(field) {
 		var count = 0;
