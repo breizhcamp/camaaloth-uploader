@@ -1,6 +1,7 @@
 package org.breizhcamp.video.uploader.web
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.servlet.http.HttpServletRequest
 import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.shared.PathUtils
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 
 /**
  * Controller to handle Google authentication
@@ -30,11 +32,22 @@ class YoutubeController(
     private val logger = KotlinLogging.logger { }
     private var redirectUrl: String? = null
 
+    /**
+     * @param baseUrl url of the page the browser is on, used to build the OAuth redirect uri.
+     * Optional: when the link did not carry it, fall back on the current request so the
+     * authentication can never break on a missing parameter.
+     */
     @GetMapping("/auth")
-    fun auth(@RequestParam baseUrl: String): String {
-        redirectUrl = "${baseUrl}yt/return"
+    fun auth(@RequestParam(required = false) baseUrl: String?, request: HttpServletRequest): String {
+        redirectUrl = returnUrl(baseUrl, request)
         return "redirect:" + youtubeService.getAuthUrl(requireNotNull(redirectUrl))
             .also { logger.info { "Redirecting to $it" } }
+    }
+
+    private fun returnUrl(baseUrl: String?, request: HttpServletRequest): String {
+        val base = baseUrl?.takeIf { it.isNotBlank() }
+            ?: ServletUriComponentsBuilder.fromContextPath(request).build().toUriString()
+        return base.substringBefore('?').substringBefore('#').removeSuffix("/") + "/yt/return"
     }
 
     @GetMapping("/return")
@@ -44,16 +57,24 @@ class YoutubeController(
         return "redirect:/"
     }
 
+    @PostMapping("/disconnect")
+    fun disconnect(): String {
+        youtubeService.disconnect()
+        ytSession.clear()
+        return "redirect:/"
+    }
+
+    /** Drop the stored credential and send the user back to Google in a single click */
+    @PostMapping("/reconnect")
+    fun reconnect(@RequestParam(required = false) baseUrl: String?, request: HttpServletRequest): String {
+        youtubeService.disconnect()
+        ytSession.clear()
+        return auth(baseUrl, request)
+    }
+
     @GetMapping("/reload")
     fun reloadYtSession(): String {
-        val channels = youtubeService.getChannels()
-        ytSession.channels = channels
-        if (channels.size == 1) {
-            ytSession.apply {
-                currentChannel = ytSession.channels!![0]
-                playlists = youtubeService.getPlaylistsBy(channelId = ytSession.currentChannel!!.id)
-            }
-        }
+        youtubeService.loadSession()
         return "redirect:/"
     }
 

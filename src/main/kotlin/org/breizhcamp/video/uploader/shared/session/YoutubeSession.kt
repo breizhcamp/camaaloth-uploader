@@ -20,4 +20,12 @@ class YoutubeSession {
     var curPlaylist: Playlist? = null
 
     fun playlistsSorted() = playlists?.sortedBy { it.snippet.title }
+
+    /** Forget everything loaded from the account, used when disconnecting  */
+    fun clear() {
+        channels = null
+        currentChannel = null
+        playlists = null
+        curPlaylist = null
+    }
 }
