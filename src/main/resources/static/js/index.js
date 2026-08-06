@@ -24,8 +24,32 @@ angular.module('videosApp', [])
 	// Récupérer l'état de la playlist depuis le template
 	$scope.hasPlaylist = window.hasPlaylist || false;
 	$scope.currentPlaylist = window.currentPlaylist || null;
+	$scope.batches = window.batches || [];
+
+	// pourcentage d'avancement d'un lot, pour la largeur de la barre
+	$scope.percent = function(batch) {
+		if (!batch.total) return 0;
+		return Math.round(batch.done * 100 / batch.total);
+	}
+
+	$scope.isRunning = function(id) {
+		for (var i = 0; i < $scope.batches.length; i++) {
+			if ($scope.batches[i].id === id) return true;
+		}
+		return false;
+	}
 
 	stompClient.connect({}, function() {
+
+		// avancement des opérations longues
+		stompClient.subscribe("/batch", function(msg) {
+			if (msg.command === "MESSAGE" && msg.body) {
+				var batches = JSON.parse(msg.body);
+				$scope.$apply(function() {
+					$scope.batches = batches;
+				});
+			}
+		});
 
 		stompClient.subscribe("/videos", function(msg) {
 			if (msg.command === "MESSAGE" && msg.body) {
@@ -61,8 +85,12 @@ angular.module('videosApp', [])
 		stompClient.send('/videos/upload', {}, video.dirName);
 	}
 
-	$scope.syncMetadata = function(video) {
-		stompClient.send('/videos/syncMetadata', {}, video.dirName);
+	$scope.syncDescription = function(video) {
+		stompClient.send('/videos/syncDescription', {}, video.dirName);
+	}
+
+	$scope.syncThumbnail = function(video) {
+		stompClient.send('/videos/syncThumbnail', {}, video.dirName);
 	}
 
 	$scope.uploadAll = function() {

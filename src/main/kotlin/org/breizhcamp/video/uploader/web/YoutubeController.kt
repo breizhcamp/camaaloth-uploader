@@ -95,10 +95,17 @@ class YoutubeController(
         return "redirect:/"
     }
 
-    /** Push description and thumbnail of every video already online */
-    @PostMapping("/syncMetadataAll")
-    fun syncMetadataAll(): String {
-        youtubeService.syncAllMetadata()
+    /** Push the description of every video already online */
+    @PostMapping("/syncDescriptionsAll")
+    fun syncDescriptionsAll(): String {
+        youtubeService.syncAllDescriptions()
+        return "redirect:/"
+    }
+
+    /** Push the thumbnail of every video already online */
+    @PostMapping("/syncThumbnailsAll")
+    fun syncThumbnailsAll(): String {
+        youtubeService.syncAllThumbnails()
         return "redirect:/"
     }
 
@@ -128,14 +135,18 @@ class YoutubeController(
         }
     }
 
-    @MessageMapping("$VIDEOS_TOPIC/syncMetadata")
-    fun syncMetadata(@Payload path: String) {
-        PathUtils.getIdFromPath(path)?.let {
-            videoService.getInformationsFrom(fileService.recordingDir.resolve(path))?.let {
-                youtubeService.syncMetadata(it)
-            }
-        }
+    @MessageMapping("$VIDEOS_TOPIC/syncDescription")
+    fun syncDescription(@Payload path: String) {
+        videoAt(path)?.let { youtubeService.syncDescription(it) }
     }
+
+    @MessageMapping("$VIDEOS_TOPIC/syncThumbnail")
+    fun syncThumbnail(@Payload path: String) {
+        videoAt(path)?.let { youtubeService.syncThumbnail(it) }
+    }
+
+    private fun videoAt(path: String) = PathUtils.getIdFromPath(path)
+        ?.let { videoService.getInformationsFrom(fileService.recordingDir.resolve(path)) }
 
     companion object {
         const val VIDEOS_TOPIC = "/videos"

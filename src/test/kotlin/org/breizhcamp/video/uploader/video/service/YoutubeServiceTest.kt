@@ -18,6 +18,7 @@ import com.google.api.services.youtube.model.Playlist
 import org.breizhcamp.video.uploader.event.domain.Event
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.shared.config.YoutubeAuthConfig.Companion.YT_USER_ID
+import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.session.PlaylistStore
 import org.breizhcamp.video.uploader.shared.session.SelectedPlaylist
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
@@ -29,6 +30,7 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.times
 import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -45,6 +47,7 @@ class YoutubeServiceTest {
     private val videoService = mock(VideoService::class.java)
     private val eventService = mock(EventService::class.java)
     private val playlistStore = mock(PlaylistStore::class.java)
+    private val batchProgress = mock(BatchProgressTracker::class.java)
     private val ytSession = YoutubeSession()
 
     @BeforeEach
@@ -64,6 +67,7 @@ class YoutubeServiceTest {
             youtubeLibrary,
             ytSession,
             playlistStore,
+            batchProgress,
         )
     }
 
@@ -191,14 +195,24 @@ class YoutubeServiceTest {
     }
 
     @Test
-    fun `should push the description and the thumbnail of a video already online`() {
+    fun `should push the description of a video already online`() {
         val video = videoOnline(thumbnail = Paths.get("videos/talk/thumb.png"))
         `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
 
-        service.pushMetadata(video)
+        service.pushDescription(video)
 
         verify(youtubeLibrary).updateDescription("yt-1", "Le résumé")
+        verify(youtubeLibrary, never()).uploadThumbnail(video)
+    }
+
+    @Test
+    fun `should push the thumbnail of a video already online`() {
+        val video = videoOnline(thumbnail = Paths.get("videos/talk/thumb.png"))
+
+        service.pushThumbnail(video)
+
         verify(youtubeLibrary).uploadThumbnail(video)
+        verify(youtubeLibrary, never()).updateDescription(anyString(), anyString())
     }
 
     @Test
@@ -206,15 +220,23 @@ class YoutubeServiceTest {
         val video = videoOnline(thumbnail = null)
         `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "   "))
 
-        service.pushMetadata(video)
+        service.pushDescription(video)
 
         verify(youtubeLibrary, never()).updateDescription(anyString(), anyString())
+    }
+
+    @Test
+    fun `should skip the thumbnail when none was generated`() {
+        val video = videoOnline(thumbnail = null)
+
+        service.pushThumbnail(video)
+
         verify(youtubeLibrary, never()).uploadThumbnail(video)
     }
 
     @Test
     fun `should ignore a video that was never uploaded`() {
-        service.pushMetadata(videoOnline(thumbnail = null).apply { youtubeId = null })
+        service.pushDescription(videoOnline(thumbnail = null).apply { youtubeId = null })
 
         verify(youtubeLibrary, never()).updateDescription(anyString(), anyString())
     }
@@ -224,7 +246,7 @@ class YoutubeServiceTest {
         val video = videoOnline(thumbnail = null)
         `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
 
-        service.pushMetadata(video)
+        service.pushDescription(video)
 
         assertThat(video.status).isEqualTo(VideoInfo.Status.DONE)
         verify(videoService, never()).updateVideo(video)
@@ -237,7 +259,7 @@ class YoutubeServiceTest {
         doThrow(IllegalStateException("YouTube does not know any video [yt-1]"))
             .`when`(youtubeLibrary).updateDescription(anyString(), anyString())
 
-        service.pushMetadata(video)
+        service.pushDescription(video)
 
         assertThat(video.status).isEqualTo(VideoInfo.Status.FAILED)
         verify(videoService, never()).updateVideo(video)
@@ -250,10 +272,45 @@ class YoutubeServiceTest {
         `when`(videoService.list()).thenReturn(listOf(online, notUploaded))
         `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
 
-        service.syncAllMetadata()
+        service.syncAllDescriptions()
 
         verify(youtubeLibrary, timeout(1000)).updateDescription("yt-1", "Le résumé")
         verify(youtubeLibrary, never()).updateDescription("yt-2", "Le résumé")
+    }
+
+    @Test
+    fun `should open a batch sized after the videos to push`() {
+        `when`(videoService.list()).thenReturn(
+            listOf(videoOnline(null), videoOnline(null), videoOnline(null).apply { youtubeId = null })
+        )
+        `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
+
+        service.syncAllDescriptions()
+
+        verify(batchProgress).add(DESCRIPTIONS_BATCH, "Envoi des descriptions", 2)
+        verify(batchProgress, timeout(1000).times(2)).step(DESCRIPTIONS_BATCH)
+    }
+
+    @Test
+    fun `should feed the thumbnail batch on its own`() {
+        `when`(videoService.list()).thenReturn(listOf(videoOnline(null)))
+
+        service.syncAllThumbnails()
+
+        verify(batchProgress).add(THUMBNAILS_BATCH, "Envoi des miniatures", 1)
+        verify(batchProgress, timeout(1000)).step(THUMBNAILS_BATCH)
+        verify(batchProgress, never()).step(DESCRIPTIONS_BATCH)
+    }
+
+    @Test
+    fun `should count a failed push as handled, so the bar cannot freeze`() {
+        `when`(videoService.list()).thenReturn(listOf(videoOnline(null)))
+        `when`(eventService.findEventBy("1183944")).thenReturn(Event(id = "1183944", description = "Le résumé"))
+        doThrow(IllegalStateException("boom")).`when`(youtubeLibrary).updateDescription(anyString(), anyString())
+
+        service.syncAllDescriptions()
+
+        verify(batchProgress, timeout(1000)).step(DESCRIPTIONS_BATCH)
     }
 
     private fun videoOnline(thumbnail: java.nio.file.Path?) = VideoInfo(

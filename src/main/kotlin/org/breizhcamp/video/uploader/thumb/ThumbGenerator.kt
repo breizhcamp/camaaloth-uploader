@@ -27,11 +27,17 @@ class ThumbGeneratorSrv(
     private val inkscape: InkscapeLocator,
 ) {
 
-    fun generateAllThumbs() {
+    /**
+     * @param onProgress called with the number of events handled so far and the total, so a caller
+     * driving the generation from the web interface can show where it is
+     */
+    fun generateAllThumbs(onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }) {
         val svgThumb = FileUtils.readFileToString(Paths.get(props.assetsDir, "thumb.svg").toFile(), UTF_8)
 
-        eventService.getEvents()
-            .forEach { event ->
+        val events = eventService.getEvents()
+        events
+            .forEachIndexed { index, event ->
+                onProgress(index, events.size)
                 if (event.speakers != null) {
                     var speakers = event.speakers.replace("[\\\\/:*?\"<>|]".toRegex(), "-")
                     if (speakers.endsWith(", ")) speakers = speakers.substring(0, speakers.length - 2)
@@ -47,6 +53,7 @@ class ThumbGeneratorSrv(
                     println("WARNING: speaker is null for ${event.id} ${event.name}")
                 }
             }
+        onProgress(events.size, events.size)
     }
 
     private fun makeThumb(svg: String, title: String?, speakers: String, destDir: Path, targetName: String) {
