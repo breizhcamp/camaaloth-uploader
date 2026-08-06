@@ -3,8 +3,9 @@ FFMPEG_NORMALIZE="${FFMPEG_NORMALIZE:-ffmpeg-normalize}"
 
 mkdir -p target/videos
 
-mapfile -d '' videos < <(find src -name '*.mp4' -print0)
-for video in "${videos[@]}"; do
+# a plain while loop rather than mapfile: macOS still ships bash 3.2, which has no mapfile, and the
+# script then walked an empty list and exited 0 without normalizing anything
+find src -name '*.mp4' -print0 | while IFS= read -r -d '' video; do
     echo "Processing ${video}"
     output_video="$(dirname "${video}" | sed -e 's|^src/||' -e 's|/.*||')"
 
