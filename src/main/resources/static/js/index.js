@@ -61,6 +61,10 @@ angular.module('videosApp', [])
 		stompClient.send('/videos/upload', {}, video.dirName);
 	}
 
+	$scope.syncMetadata = function(video) {
+		stompClient.send('/videos/syncMetadata', {}, video.dirName);
+	}
+
 	$scope.uploadAll = function() {
 		// Vérifier qu'une playlist est sélectionnée
 		if (!$scope.hasPlaylist) {

@@ -9,6 +9,7 @@ import jakarta.annotation.PreDestroy
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.shared.config.YoutubeAuthConfig
 import org.breizhcamp.video.uploader.shared.exception.UpdateException
+import org.breizhcamp.video.uploader.shared.session.PlaylistStore
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.breizhcamp.video.uploader.video.repository.YoutubeLibrary
@@ -21,7 +22,12 @@ import java.math.BigDecimal
 import java.math.MathContext
 import java.security.GeneralSecurityException
 import java.util.concurrent.BlockingDeque
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingDeque
+
+/** Value the playlist dropdown sends when the user picks no playlist at all */
+private const val NO_PLAYLIST = "none"
 
 @Service
 class YoutubeService(
@@ -31,9 +37,12 @@ class YoutubeService(
     private val template: SimpMessagingTemplate,
     private val youtubeLibrary: YoutubeLibrary,
     private val ytSession: YoutubeSession,
+    private val playlistStore: PlaylistStore,
 ) {
     private val logger = KotlinLogging.logger { }
     private lateinit var uploader: YtUploader
+    private val metadataSyncer: ExecutorService =
+        Executors.newSingleThreadExecutor { Thread(it, "YtMetadataSync") }
 
     @PostConstruct
     fun setUp() {
@@ -44,6 +53,7 @@ class YoutubeService(
     @PreDestroy
     fun tearDown() {
         uploader.shutdown()
+        metadataSyncer.shutdown()
     }
 
     /**
@@ -90,6 +100,45 @@ class YoutubeService(
         val channel = channels.first()
         ytSession.currentChannel = channel
         ytSession.playlists = youtubeLibrary.getPlaylists(channelId = channel.id)
+        restoreSelectedPlaylist()
+    }
+
+    /**
+     * Bring back the playlist chosen before the last restart, but only when the channel still owns
+     * it: a stale selection would silently send the uploads to a playlist that no longer exists.
+     */
+    private fun restoreSelectedPlaylist() {
+        val saved = playlistStore.read() ?: return
+        val known = ytSession.playlists?.firstOrNull { it.id == saved.id }
+
+        if (known == null) {
+            logger.warn { "Saved playlist [${saved.title} / ${saved.id}] is not on this channel any more" }
+            return
+        }
+        ytSession.curPlaylist = known
+        logger.info { "Selected playlist restored: [${saved.title} / ${saved.id}]" }
+    }
+
+    /**
+     * Select the playlist the uploads go to, and remember it across restarts.
+     *
+     * @param playlistId id of the playlist, or `none` to select nothing
+     */
+    fun selectPlaylist(playlistId: String) {
+        if (playlistId == NO_PLAYLIST) {
+            ytSession.curPlaylist = null
+            playlistStore.write(null)
+            return
+        }
+
+        val playlist = ytSession.playlists?.firstOrNull { it.id == playlistId }
+        if (playlist == null) {
+            logger.warn { "Unknown playlist [$playlistId], selection left alone" }
+            return
+        }
+        logger.info { "Changing current playlist $playlistId" }
+        ytSession.curPlaylist = playlist
+        playlistStore.write(playlist)
     }
 
     /**
@@ -135,6 +184,58 @@ class YoutubeService(
      */
     fun upload(videoInfo: VideoInfo) {
         uploader.uploadVideo(videoInfo)
+    }
+
+    /**
+     * Queue the metadata of an already uploaded video to be pushed onto Youtube.
+     *
+     * Kept off the uploader thread so a catch-up does not wait behind a queue of uploads, and off
+     * the request thread so the whole schedule can be pushed without the browser timing out.
+     */
+    fun syncMetadata(videoInfo: VideoInfo) {
+        metadataSyncer.execute { pushMetadata(videoInfo) }
+    }
+
+    /** Queue every video already online, whatever its recorded status */
+    fun syncAllMetadata() {
+        videoService.list()
+            .filter { it.youtubeId != null }
+            .also { logger.info { "Pushing the metadata of ${it.size} videos" } }
+            .forEach { syncMetadata(it) }
+    }
+
+    /**
+     * Push the description and the thumbnail of a video onto Youtube, right now.
+     *
+     * The broadcast status is not written to disk: the upload stays DONE, a failure here must not
+     * leave the video stuck in an intermediate state on the next start.
+     */
+    fun pushMetadata(videoInfo: VideoInfo) {
+        val youtubeId = videoInfo.youtubeId ?: return
+        val previousStatus = videoInfo.status
+
+        try {
+            broadcast(videoInfo, VideoInfo.Status.METADATA)
+
+            eventService.findEventBy(id = requireNotNull(videoInfo.eventId))
+                ?.description
+                ?.takeIf { it.isNotBlank() }
+                ?.let { youtubeLibrary.updateDescription(youtubeId, it) }
+                ?: logger.info { "[${videoInfo.eventId}] No description in the schedule, skipped" }
+
+            if (videoInfo.thumbnail != null) youtubeLibrary.uploadThumbnail(videoInfo)
+            else logger.info { "[${videoInfo.eventId}] No thumbnail on disk, skipped" }
+
+            broadcast(videoInfo, previousStatus)
+        } catch (e: Exception) {
+            logger.error(e) { "Unable to push the metadata of [${videoInfo.dirName}]" }
+            broadcast(videoInfo, VideoInfo.Status.FAILED)
+        }
+    }
+
+    private fun broadcast(videoInfo: VideoInfo, status: VideoInfo.Status) {
+        videoInfo.status = status
+        template.convertAndSend(YoutubeController.VIDEOS_TOPIC, videoInfo)
     }
 
     /**

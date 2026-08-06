@@ -307,16 +307,24 @@
 							<h3 class="section-title mb-0">
 								<i class="fas fa-video"></i> Liste des Vidéos
 							</h3>
-							<form method="post" th:action="@{/yt/uploadAll}" class="d-inline" onsubmit="return angular.element(this).scope().uploadAll()">
-								<button type="submit" class="btn btn-success btn-modern" 
-								        title="Tout envoyer" 
-								        ng-disabled="!canUpload()"
-								        ng-class="{'btn-secondary': !canUpload(), 'btn-success': canUpload()}">
-									<i class="fas fa-cloud-upload-alt"></i> 
-									<span ng-if="canUpload()">Tout envoyer</span>
-									<span ng-if="!canUpload()">Sélectionner une playlist</span>
-								</button>
-							</form>
+							<div class="d-flex gap-2">
+								<form method="post" th:action="@{/yt/syncMetadataAll}" th:if="${connected}">
+									<button type="submit" class="btn btn-outline-primary btn-modern"
+									        title="Renvoyer description et miniature de toutes les vidéos déjà en ligne">
+										<i class="fas fa-sync"></i> Pousser les métadonnées
+									</button>
+								</form>
+								<form method="post" th:action="@{/yt/uploadAll}" class="d-inline" onsubmit="return angular.element(this).scope().uploadAll()">
+									<button type="submit" class="btn btn-success btn-modern" 
+									        title="Tout envoyer" 
+									        ng-disabled="!canUpload()"
+									        ng-class="{'btn-secondary': !canUpload(), 'btn-success': canUpload()}">
+										<i class="fas fa-cloud-upload-alt"></i> 
+										<span ng-if="canUpload()">Tout envoyer</span>
+										<span ng-if="!canUpload()">Sélectionner une playlist</span>
+									</button>
+								</form>
+							</div>
 						</div>
 
 						<div ng-show="loaded">
@@ -357,6 +365,10 @@
 													</div>
 												</div>
 
+												<span ng-switch-when="METADATA" class="status-badge status-in-progress">
+													<i class="fas fa-sync fa-spin"></i> Métadonnées
+												</span>
+
 												<div ng-switch-when="THUMBNAIL">
 													<div class="status-badge status-in-progress">
 														<i class="fas fa-image"></i> Miniature
@@ -384,6 +396,15 @@
 													ng-disabled="!canUpload()"
 													th:if="${connected}">
 												<i class="fas fa-cloud-upload-alt"></i>
+											</button>
+
+											<button type="button"
+											        title="Renvoyer description et miniature"
+											        class="btn btn-outline-primary btn-sm btn-sm-modern me-1"
+											        ng-click="syncMetadata(video)"
+											        ng-show="video.youtubeId"
+											        th:if="${connected}">
+												<i class="fas fa-sync"></i>
 											</button>
 
 											<a ng-show="video.youtubeId" 

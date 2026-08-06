@@ -11,6 +11,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.breizhcamp.video.uploader.event.domain.Event
 import org.breizhcamp.video.uploader.shared.config.YoutubeAuthConfig.Companion.YT_USER_ID
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Repository
 import java.io.IOException
 
@@ -19,6 +20,8 @@ class YoutubeLibrary(
     private val httpTransport: HttpTransport,
     private val jacksonFactory: JacksonFactory,
     private val ytAuthFlow: GoogleAuthorizationCodeFlow,
+    /** Overridden by the tests to talk to a local server instead of Google */
+    @Value("\${youtube.api.root-url:}") private val apiRootUrl: String = "",
 ) {
     private val logger = KotlinLogging.logger { }
 
@@ -51,11 +54,35 @@ class YoutubeLibrary(
             }
             snippet = VideoSnippet().apply {
                 title = makeTitle(event, speakers)
+                description = makeDescription(event)
             }
         }
         val videoContent = FileContent("video/*", videoInfo.path.toFile())
 
         return createYoutubeClient().videos()?.insert("snippet,status", video, videoContent)
+    }
+
+    /**
+     * Push the talk description onto a video already online.
+     *
+     * `videos.update` replaces the whole snippet and demands a title and a category, so the current
+     * snippet is read back first and only its description is swapped.
+     */
+    fun updateDescription(youtubeId: String, description: String) {
+        logger.info { "[$youtubeId] Updating the video description" }
+
+        val video = createYoutubeClient()
+            .videos()
+            ?.list("snippet")
+            ?.setId(youtubeId)
+            ?.execute()
+            ?.items
+            ?.firstOrNull()
+            ?: throw IllegalStateException("YouTube does not know any video [$youtubeId]")
+
+        video.snippet.description = sanitize(description).take(MAX_DESCRIPTION_LENGTH)
+        createYoutubeClient().videos()?.update("snippet", video)?.execute()
+        logger.info { "[$youtubeId] Description updated" }
     }
 
     fun insertInPlaylist(videoInfo: VideoInfo) {
@@ -88,6 +115,7 @@ class YoutubeLibrary(
         getCurrentCred() ?: throw IllegalStateException("Not connected")
     )
         .setApplicationName("yt-uploader/1.0")
+        .apply { if (apiRootUrl.isNotBlank()) setRootUrl(apiRootUrl) }
         .build()
 
     /**
@@ -138,6 +166,9 @@ class YoutubeLibrary(
         /** Longest title Youtube accepts, a longer one is rejected with `invalidTitle` */
         private const val MAX_TITLE_LENGTH = 100
 
+        /** Longest description Youtube accepts */
+        private const val MAX_DESCRIPTION_LENGTH = 5000
+
         /**
          * Make a title compatible with Youtube : 100 chars with no < or >.
          * https://developers.google.com/youtube/v3/docs/videos#snippet.title
@@ -158,10 +189,14 @@ class YoutubeLibrary(
             else name.take((roomForName - 1).coerceAtLeast(0)) + "…"
 
             //speakers alone can already blow the budget, so cut whatever is left over
-            return (shortened + suffix)
-                .take(MAX_TITLE_LENGTH)
-                .replace('<', '〈')
-                .replace('>', '〉')
+            return sanitize(shortened + suffix).take(MAX_TITLE_LENGTH)
         }
+
+        /** The talk description, or an empty one when the schedule has none */
+        private fun makeDescription(event: Event): String =
+            sanitize(event.description.orEmpty()).take(MAX_DESCRIPTION_LENGTH)
+
+        /** Youtube rejects angle brackets in both the title and the description */
+        private fun sanitize(text: String): String = text.replace('<', '〈').replace('>', '〉')
     }
 }
