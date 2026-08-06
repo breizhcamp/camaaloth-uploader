@@ -49,9 +49,11 @@ gradle-app.setting
 
 ### Project ###
 
-# Working directories
+# Working directories, except the versioned thumbnail template
+# (/assets/* and not /assets/, otherwise git skips the directory and the negation never applies)
 /videos/
-/assets/
+/assets/*
+!/assets/thumb.svg
 
 # Schedule data: exports dropped at the repository root, and the fetched schedule
 /*.json
