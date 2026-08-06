@@ -66,7 +66,9 @@ class VideoService(
         val metadata = VideoMetadata(
             status = video.status,
             progression = video.progression,
-            youtubeId = video.youtubeId
+            youtubeId = video.youtubeId,
+            descriptionStatus = video.descriptionStatus,
+            thumbnailStatus = video.thumbnailStatus,
         )
 
         statusFile.parent.resolve(METADATA_FILENAME).let {

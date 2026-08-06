@@ -338,14 +338,16 @@
 							<div class="d-flex gap-2">
 								<form method="post" th:action="@{/yt/syncDescriptionsAll}" th:if="${connected}">
 									<button type="submit" class="btn btn-outline-primary btn-modern"
-									        title="Renvoyer la description de toutes les vidéos déjà en ligne">
-										<i class="fas fa-align-left"></i> Pousser les descriptions
+									        ng-disabled="!pending('descriptionStatus')"
+									        title="Envoyer la description des vidéos en ligne qui ne l'ont pas encore reçue">
+										<i class="fas fa-align-left"></i> Pousser les descriptions ({{pending('descriptionStatus')}})
 									</button>
 								</form>
 								<form method="post" th:action="@{/yt/syncThumbnailsAll}" th:if="${connected}">
 									<button type="submit" class="btn btn-outline-primary btn-modern"
-									        title="Renvoyer la miniature de toutes les vidéos déjà en ligne">
-										<i class="fas fa-image"></i> Pousser les miniatures
+									        ng-disabled="!pending('thumbnailStatus')"
+									        title="Envoyer la miniature des vidéos en ligne qui ne l'ont pas encore reçue">
+										<i class="fas fa-image"></i> Pousser les miniatures ({{pending('thumbnailStatus')}})
 									</button>
 								</form>
 								<form method="post" th:action="@{/yt/uploadAll}" class="d-inline" onsubmit="return angular.element(this).scope().uploadAll()">
@@ -379,46 +381,25 @@
 											<i ng-show="video.thumbnail" class="fas fa-image text-success ms-2" title="Miniature"></i>
 										</td>
 										<td>
-											<div ng-switch="video.status">
-												<span ng-switch-when="NOT_STARTED" class="status-badge status-not-started">
-													<i class="fas fa-clock"></i> Non démarré
+											<div class="d-flex gap-3 align-items-center">
+												<span title="{{videoLabel(video)}}">
+													<i class="fas fa-film" ng-class="iconClass(videoState(video))"></i>
+													<i class="fas" ng-class="badgeClass(videoState(video))"></i>
 												</span>
-												<span ng-switch-when="WAITING" class="status-badge status-waiting">
-													<i class="fas fa-hourglass-half"></i> En attente
+												<span title="Description : {{pushLabel(video.descriptionStatus)}}">
+													<i class="fas fa-align-left" ng-class="iconClass(video.descriptionStatus)"></i>
+													<i class="fas" ng-class="badgeClass(video.descriptionStatus)"></i>
 												</span>
-												<span ng-switch-when="INITIALIZING" class="status-badge status-waiting">
-													<i class="fas fa-spinner fa-spin"></i> Initialisation
-												</span>
-
-												<div ng-switch-when="IN_PROGRESS">
-													<div class="status-badge status-in-progress mb-1">
-														<i class="fas fa-upload"></i> {{video.progression}}%
-													</div>
-													<div class="progress-simple">
-														<div class="progress-bar-simple" style="width: {{video.progression}}%"></div>
-													</div>
-												</div>
-
-												<span ng-switch-when="METADATA" class="status-badge status-in-progress">
-													<i class="fas fa-sync fa-spin"></i> Métadonnées
-												</span>
-
-												<div ng-switch-when="THUMBNAIL">
-													<div class="status-badge status-in-progress">
-														<i class="fas fa-image"></i> Miniature
-													</div>
-													<div class="progress-simple">
-														<div class="progress-bar-simple" style="width: 100%"></div>
-													</div>
-												</div>
-
-												<span ng-switch-when="DONE" class="status-badge status-done">
-													<i class="fas fa-check-circle"></i> Terminé
-												</span>
-												<span ng-switch-when="FAILED" class="status-badge status-failed">
-													<i class="fas fa-exclamation-triangle"></i> Erreur
+												<span title="Miniature : {{pushLabel(video.thumbnailStatus)}}">
+													<i class="fas fa-image" ng-class="iconClass(video.thumbnailStatus)"></i>
+													<i class="fas" ng-class="badgeClass(video.thumbnailStatus)"></i>
 												</span>
 											</div>
+										
+											<div ng-show="video.status == 'IN_PROGRESS'" class="progress-simple">
+												<div class="progress-bar-simple" style="width: {{video.progression}}%"></div>
+											</div>
+											<small ng-show="video.status == 'IN_PROGRESS'" class="text-muted">{{video.progression}}%</small>
 										</td>
 										<td>
 											<div class="d-flex gap-1 justify-content-center flex-nowrap">

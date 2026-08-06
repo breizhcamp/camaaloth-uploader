@@ -67,6 +67,9 @@ angular.module('videosApp', [])
 								video.progression = body.progression;
 								video.status = body.status;
 								video.youtubeId = body.youtubeId;
+								video.descriptionStatus = body.descriptionStatus;
+								video.thumbnailStatus = body.thumbnailStatus;
+								video.thumbnail = body.thumbnail;
 							}
 						}
 					}
@@ -83,6 +86,72 @@ angular.module('videosApp', [])
 		}
 		
 		stompClient.send('/videos/upload', {}, video.dirName);
+	}
+
+	// ----- État : une icône par élément, colorée selon son avancement -----
+
+	var PUSH_LABELS = {
+		NOT_STARTED: 'à envoyer',
+		IN_PROGRESS: 'en cours',
+		DONE: 'envoyé',
+		FAILED: 'en erreur'
+	};
+
+	var VIDEO_LABELS = {
+		NOT_STARTED: 'Vidéo : à envoyer',
+		WAITING: 'Vidéo : en attente',
+		INITIALIZING: 'Vidéo : initialisation',
+		IN_PROGRESS: 'Vidéo : envoi en cours',
+		THUMBNAIL: 'Vidéo : envoi de la miniature',
+		DONE: 'Vidéo : envoyée',
+		FAILED: 'Vidéo : en erreur'
+	};
+
+	// ramène l'état d'un upload sur les quatre mêmes valeurs que les poussées
+	$scope.videoState = function(video) {
+		switch (video.status) {
+			case 'DONE': return 'DONE';
+			case 'FAILED': return 'FAILED';
+			case 'NOT_STARTED': return 'NOT_STARTED';
+			default: return 'IN_PROGRESS';
+		}
+	}
+
+	$scope.videoLabel = function(video) {
+		return VIDEO_LABELS[video.status] || video.status;
+	}
+
+	$scope.pushLabel = function(status) {
+		return PUSH_LABELS[status] || PUSH_LABELS.NOT_STARTED;
+	}
+
+	$scope.iconClass = function(status) {
+		switch (status) {
+			case 'DONE': return 'text-success';
+			case 'FAILED': return 'text-danger';
+			case 'IN_PROGRESS': return 'text-primary';
+			default: return 'text-muted opacity-50';
+		}
+	}
+
+	// la petite pastille collée à l'icône, qui dit l'état sans dépendre de la couleur
+	$scope.badgeClass = function(status) {
+		switch (status) {
+			case 'DONE': return 'fa-check text-success';
+			case 'FAILED': return 'fa-xmark text-danger';
+			case 'IN_PROGRESS': return 'fa-spinner fa-spin text-primary';
+			default: return 'fa-minus text-muted opacity-50';
+		}
+	}
+
+	// combien de vidéos en ligne attendent encore cet envoi, ce que le bouton global traitera
+	$scope.pending = function(field) {
+		var count = 0;
+		var videos = $scope.videos || [];
+		for (var i = 0; i < videos.length; i++) {
+			if (videos[i].youtubeId && videos[i][field] !== 'DONE') count++;
+		}
+		return count;
 	}
 
 	$scope.syncDescription = function(video) {
