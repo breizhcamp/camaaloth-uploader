@@ -277,6 +277,15 @@ Une ligne par fichier, rien n'est réencodé :
 Cibles : *Integrated loudness* -23 LUFS et *True peak* -3 dBFS. Un écart de plus de 1 LU sur `I`
 s'entend au passage d'une vidéo à l'autre. Un `?` signale un fichier que ffmpeg n'a pas su mesurer.
 
+Compter environ une minute par heure de vidéo : le fichier est lu en entier, sans être réencodé.
+
+Le binaire est `ffmpeg` du `PATH`, surchargeable — utile depuis un terminal d'IDE ou une tâche
+planifiée, où le `PATH` de Homebrew est souvent absent :
+
+```bash
+FFMPEG=/opt/homebrew/bin/ffmpeg scripts/check_loudness.sh /Volumes/BrzhCampZ1/2026
+```
+
 Pour le rapport complet d'un seul fichier — *Integrated loudness*, *Loudness range* et *True peak* :
 
 ```bash
