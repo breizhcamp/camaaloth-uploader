@@ -3,6 +3,7 @@ package org.breizhcamp.video.uploader.web
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
+import org.breizhcamp.video.uploader.file.service.MetadataBackupService
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
 import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.config.PathsReport
@@ -13,6 +14,7 @@ import org.springframework.ui.Model
 import org.springframework.ui.set
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import java.nio.file.Files
 
 @Controller
@@ -24,6 +26,7 @@ class HomeController(
     private val youtubeSession: YoutubeSession,
     private val batchProgress: BatchProgressTracker,
     private val pathsReport: PathsReport,
+    private val metadataBackup: MetadataBackupService,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -73,6 +76,22 @@ class HomeController(
     fun generateSchedule(): String {
         logger.info { "Generate schedule" }
         videoService.generateUpdatedSchedule()
+        return "redirect:/"
+    }
+
+    /** Zip every .json of the recording dir, and say on the page where it went */
+    @PostMapping("/backupMetadata")
+    fun backupMetadata(redirect: RedirectAttributes): String {
+        val (message, failed) = try {
+            metadataBackup.backup()
+                ?.let { "${it.files} fichiers .json sauvegardés dans ${it.zip.fileName}" to false }
+                ?: ("Aucun fichier .json à sauvegarder" to true)
+        } catch (e: Exception) {
+            logger.error(e) { "Cannot save the metadata" }
+            "Sauvegarde impossible : ${e.cause?.message ?: e.message}" to true
+        }
+        redirect.addFlashAttribute("backupMessage", message)
+        redirect.addFlashAttribute("backupFailed", failed)
         return "redirect:/"
     }
 

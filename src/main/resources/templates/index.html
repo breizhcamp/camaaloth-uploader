@@ -254,6 +254,20 @@
 									<i class="fas fa-download"></i> Exporter schedule.json
 								</button>
 							</form>
+
+							<form method="post" th:action="@{/backupMetadata}">
+								<button th:if="${dirExists}" type="submit" id="backupMetadata"
+								        class="btn btn-outline-success btn-modern w-100"
+								        title="Zipper tous les fichiers .json du répertoire des vidéos, dans ce même répertoire">
+									<i class="fas fa-box-archive"></i> Sauvegarder les métadata
+								</button>
+							</form>
+						</div>
+
+						<div th:if="${backupMessage}" class="alert alert-compact mt-3 mb-0"
+						     th:classappend="${backupFailed} ? 'alert-warning' : 'alert-success'">
+							<i class="fas" th:classappend="${backupFailed} ? 'fa-triangle-exclamation' : 'fa-check'"></i>
+							<span th:text="${backupMessage}"></span>
 						</div>
 					</div>
 				</div>

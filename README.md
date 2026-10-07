@@ -71,6 +71,13 @@ Dans l'ordre d'un début d'édition :
 4. **Exporter schedule.json** — écrit dans `recordingDir` une copie du schedule enrichie du
    `video_url` de chaque vidéo uploadée.
 
+À tout moment, **Sauvegarder les métadata** zippe tous les `.json` de `recordingDir`, à toute
+profondeur — les `metadata.json` qui portent l'état de chaque upload, `playlist.json`, l'export
+`schedule.json` — dans un `metadata-backup-AAAAMMJJ-HHMMSS.zip` posé dans ce même répertoire. Les
+fichiers cachés sont ignorés (`._metadata.json` de macOS, `.datastore` du token). Un message sous les
+boutons donne le nombre de fichiers et le nom du zip. À faire avant une manipulation risquée, comme
+le `jq` des *Tips and tricks* : pour revenir en arrière, `unzip -o` du zip dans `recordingDir`.
+
 #### YouTube
 
 **S'authentifier sur YouTube** ouvre le consentement Google, avec sélecteur de compte. Une fois
@@ -222,6 +229,7 @@ Dans `recordingDir` :
 <talk>/thumb.png             la miniature, générée
 <talk>/metadata.json         l'état de la vidéo
 playlist.json                la playlist sélectionnée
+metadata-backup-*.zip        les sauvegardes du bouton « Sauvegarder les métadata »
 schedule.json                l'export du bouton « Exporter schedule.json »
 ```
 

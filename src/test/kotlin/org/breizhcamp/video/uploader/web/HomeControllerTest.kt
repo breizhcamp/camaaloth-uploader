@@ -4,6 +4,7 @@ import com.google.api.services.youtube.model.Channel
 import com.google.api.services.youtube.model.Playlist
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
+import org.breizhcamp.video.uploader.file.service.MetadataBackupService
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
 import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.config.PathsReport
@@ -16,7 +17,10 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.model
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.nio.file.Paths
 
@@ -27,6 +31,7 @@ class HomeControllerTest {
     private val ytSession = YoutubeSession()
     private val batchProgress = mock(BatchProgressTracker::class.java)
     private val pathsReport = mock(PathsReport::class.java)
+    private val metadataBackup = mock(MetadataBackupService::class.java)
     private lateinit var mockMvc: MockMvc
 
     @BeforeEach
@@ -44,6 +49,7 @@ class HomeControllerTest {
                 ytSession,
                 batchProgress,
                 pathsReport,
+                metadataBackup,
             )
         ).build()
     }
@@ -139,6 +145,36 @@ class HomeControllerTest {
 
         mockMvc.perform(get("/"))
             .andExpect(model().attribute("ytProblem", null as Any?))
+    }
+
+    @Test
+    fun `should tell where the metadata were saved`() {
+        `when`(metadataBackup.backup()).thenReturn(
+            MetadataBackupService.Backup(Paths.get("videos/metadata-backup-20261007-214512.zip"), files = 97)
+        )
+
+        mockMvc.perform(post("/backupMetadata"))
+            .andExpect(redirectedUrl("/"))
+            .andExpect(flash().attribute("backupMessage", "97 fichiers .json sauvegardés dans metadata-backup-20261007-214512.zip"))
+            .andExpect(flash().attribute("backupFailed", false))
+    }
+
+    @Test
+    fun `should say so when there is nothing to save`() {
+        `when`(metadataBackup.backup()).thenReturn(null)
+
+        mockMvc.perform(post("/backupMetadata"))
+            .andExpect(flash().attribute("backupMessage", "Aucun fichier .json à sauvegarder"))
+            .andExpect(flash().attribute("backupFailed", true))
+    }
+
+    @Test
+    fun `should report a backup that could not be written`() {
+        `when`(metadataBackup.backup()).thenThrow(java.io.UncheckedIOException(java.io.IOException("No space left on device")))
+
+        mockMvc.perform(post("/backupMetadata"))
+            .andExpect(flash().attribute("backupMessage", "Sauvegarde impossible : No space left on device"))
+            .andExpect(flash().attribute("backupFailed", true))
     }
 
     private fun connected() {

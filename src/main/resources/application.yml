@@ -7,3 +7,8 @@ spring.jackson.serialization.write_dates_as_timestamps: false
 spring.web.resources.chain.strategy.content.enabled: true
 spring.web.resources.chain.strategy.content.paths: /**
 spring.web.resources.cache.period: 365d
+
+# The session only carries the flash messages shown after a redirect. Without this, Tomcat puts
+# ;jsessionid= in the url of the redirect that opens it, which no controller matches: the page
+# then came back as an error.
+server.servlet.session.tracking-modes: cookie
