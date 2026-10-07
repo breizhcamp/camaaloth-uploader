@@ -316,12 +316,17 @@ Pour comparer toutes les vidéos d'un coup et repérer celle qui détonne :
 scripts/check_loudness.sh /Volumes/BrzhCampZ1/2026
 ```
 
-Une ligne par fichier, rien n'est réencodé :
+Seules les vidéos normalisées sont mesurées, puisque ce sont elles qui partent sur YouTube : une ligne
+par fichier, rien n'est réencodé. Les originaux qui n'ont pas encore leur version normalisée sont
+listés à la suite :
 
 ```
  I(LUFS) TP(dBFS)  FICHIER
-   -23.1     -3.0  24.Amphi A.10-00 - … - 1181830/1080p.mp4
-   -41.8    -37.6  24.Amphi B.13-30 - … - 1171038/1080p.mp4
+   -23.1     -3.0  24.Amphi A.10-00 - … - 1181830/1080p.normalized.mp4
+   -22.8     -4.2  24.Amphi B.13-30 - … - 1171038/1080p.normalized.mp4
+
+Pas encore normalisées, donc ni mesurées ni envoyables :
+  24.Amphi A.13-30 - … - 1173898/1080p.mp4
 ```
 
 Cibles : *Integrated loudness* -23 LUFS et *True peak* -3 dBFS. Un écart de plus de 1 LU sur `I`
