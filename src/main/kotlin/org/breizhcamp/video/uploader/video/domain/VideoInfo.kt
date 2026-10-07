@@ -19,6 +19,8 @@ data class VideoInfo (
     var playlistId: String? = null,
     var descriptionStatus: PushStatus = PushStatus.NOT_STARTED,
     var thumbnailStatus: PushStatus = PushStatus.NOT_STARTED,
+    /** Kept here so that rewriting the metadata during an upload does not drop it */
+    var loudness: Loudness? = null,
     /** Taken from the schedule, shown when hovering the row. Not persisted. */
     var description: String? = null,
 ){
@@ -28,6 +30,7 @@ data class VideoInfo (
         youtubeId = metadata.youtubeId
         descriptionStatus = metadata.descriptionStatus
         thumbnailStatus = metadata.thumbnailStatus
+        loudness = metadata.loudness
     }
 
     /**

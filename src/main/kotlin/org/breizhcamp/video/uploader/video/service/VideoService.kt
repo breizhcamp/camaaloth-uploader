@@ -83,6 +83,7 @@ class VideoService(
             youtubeId = video.youtubeId,
             descriptionStatus = video.descriptionStatus,
             thumbnailStatus = video.thumbnailStatus,
+            loudness = video.loudness,
         )
 
         statusFile.parent.resolve(METADATA_FILENAME).let {

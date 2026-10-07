@@ -230,7 +230,8 @@ Un `metadata.json` complet :
   "status": "DONE",
   "youtubeId": "abc123",
   "descriptionStatus": "DONE",
-  "thumbnailStatus": "NOT_STARTED"
+  "thumbnailStatus": "NOT_STARTED",
+  "loudness": { "integrated": -23.0, "truePeak": -16.8 }
 }
 ```
 
@@ -242,20 +243,63 @@ Absents du fichier, ils valent `NOT_STARTED` : les fichiers écrits avant leur e
 lisibles, rien à migrer. `DONE` signifie qu'un envoi a réellement eu lieu — un talk sans description
 au schedule, ou sans `thumb.png` sur le disque, reste à `NOT_STARTED` et sera repris plus tard.
 
+`loudness` est écrit par `scripts/normalize.sh` et seulement lu par l'application, qui le conserve
+quand elle réécrit le fichier. Absent, la vidéo n'est pas passée par le script.
+
 ### Normalisation du son des vidéos
 
-Utiliser `scripts/normalize.sh` pour normaliser le son des vidéos avant upload YouTube 
+Utiliser `scripts/normalize.sh` pour normaliser le son des vidéos avant upload YouTube. Il prend le
+répertoire source et un répertoire destination, où il recrée toute l'arborescence :
 
-Il faut avoir installé https://github.com/slhck/ffmpeg-normalize sur sa machine. C'est disponible dans un package AUR:
+```bash
+scripts/normalize.sh /Volumes/BrzhCampZ1/2026 /Volumes/BrzhCampZ1/2026-normalized
+```
+
+La source n'est jamais modifiée. Chaque `.mp4` est réécrit au même chemin relatif avec le son
+normalisé, et les autres fichiers (`thumb.png`, `metadata.json`…) sont copiés à côté : la
+destination peut servir directement de `recordingDir`.
+
+Le script se relance sans risque : une vidéo déjà présente dans la destination est sautée, et un
+fichier déjà copié n'est jamais écrasé — l'uploader met à jour les `metadata.json` de la
+destination. Une vidéo en cours s'écrit dans un `.partial.mp4`, renommé à la fin : une interruption
+ne laisse pas de vidéo tronquée prise pour terminée. Le script sort en erreur si une vidéo a échoué.
+La destination ne doit pas être à l'intérieur de la source.
+
+Chaque vidéo normalisée est ensuite mesurée, et son niveau rangé dans le `metadata.json` de son
+répertoire, sans toucher aux autres champs :
+
+```json
+{
+  "status": "NOT_STARTED",
+  "loudness": { "integrated": -23.0, "truePeak": -16.8 }
+}
+```
+
+L'application l'affiche dans la colonne **Son** de la liste — *integrated* en LUFS, *true peak* en
+dBFS — en vert dans la cible, en rouge au-delà de 1 dB d'écart (-23 LUFS, et pas plus de -3 dBFS de
+pic). Un clic sur l'en-tête trie sur l'*integrated*, les vidéos non mesurées en premier. Une vidéo
+déjà normalisée mais sans mesure, par une version précédente du script, est mesurée au passage
+suivant. La mesure demande `ffmpeg` et `jq`, surchargeables par `FFMPEG` et `JQ`.
+
+Il faut avoir installé https://github.com/slhck/ffmpeg-normalize sur sa machine. C'est disponible
+dans un package AUR, ou via pip :
 
 ```commandline
 yay -S python-ffmpeg-progress-yield ffmpeg-normalize
+pipx install ffmpeg-normalize
 ```
 
 Le binaire utilisé est `ffmpeg-normalize` du `PATH`, surchargeable :
 
 ```bash
-FFMPEG_NORMALIZE=/chemin/vers/ffmpeg-normalize scripts/normalize.sh
+FFMPEG_NORMALIZE=/chemin/vers/ffmpeg-normalize scripts/normalize.sh SOURCE DESTINATION
+```
+
+La variable peut contenir une commande en plusieurs mots, pour passer par un lanceur sans rien
+installer :
+
+```bash
+FFMPEG_NORMALIZE="uv tool run ffmpeg-normalize" scripts/normalize.sh SOURCE DESTINATION
 ```
 
 ### Vérification du niveau sonore
