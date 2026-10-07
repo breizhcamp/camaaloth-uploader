@@ -217,10 +217,12 @@ C'est le symptôme d'un `assetsDir` qui pointe sur la mauvaise édition — à n
 Dans `recordingDir` :
 
 ```
-<talk>/thumb.png        la miniature, générée
-<talk>/metadata.json    l'état de la vidéo
-playlist.json           la playlist sélectionnée
-schedule.json           l'export du bouton « Exporter schedule.json »
+<talk>/1080p.mp4             l'enregistrement original, jamais envoyé
+<talk>/1080p.normalized.mp4  la vidéo au son normalisé, la seule envoyée sur YouTube
+<talk>/thumb.png             la miniature, générée
+<talk>/metadata.json         l'état de la vidéo
+playlist.json                la playlist sélectionnée
+schedule.json                l'export du bouton « Exporter schedule.json »
 ```
 
 Un `metadata.json` complet :
@@ -248,22 +250,25 @@ quand elle réécrit le fichier. Absent, la vidéo n'est pas passée par le scri
 
 ### Normalisation du son des vidéos
 
-Utiliser `scripts/normalize.sh` pour normaliser le son des vidéos avant upload YouTube. Il prend le
-répertoire source et un répertoire destination, où il recrée toute l'arborescence :
+L'application n'envoie **jamais** l'enregistrement original : seulement sa version au son
+normalisé, écrite à côté par `scripts/normalize.sh`. Le script prend le répertoire de l'édition :
 
 ```bash
-scripts/normalize.sh /Volumes/BrzhCampZ1/2026 /Volumes/BrzhCampZ1/2026-normalized
+scripts/normalize.sh /Volumes/BrzhCampZ1/2026
 ```
 
-La source n'est jamais modifiée. Chaque `.mp4` est réécrit au même chemin relatif avec le son
-normalisé, et les autres fichiers (`thumb.png`, `metadata.json`…) sont copiés à côté : la
-destination peut servir directement de `recordingDir`.
+Chaque `1080p.mp4` donne un `1080p.normalized.mp4` dans le même répertoire ; l'original n'est
+jamais modifié. Prévoir donc le double de place sur le disque : la vidéo est recopiée telle quelle,
+seul le son est réencodé.
 
-Le script se relance sans risque : une vidéo déjà présente dans la destination est sautée, et un
-fichier déjà copié n'est jamais écrasé — l'uploader met à jour les `metadata.json` de la
-destination. Une vidéo en cours s'écrit dans un `.partial.mp4`, renommé à la fin : une interruption
-ne laisse pas de vidéo tronquée prise pour terminée. Le script sort en erreur si une vidéo a échoué.
-La destination ne doit pas être à l'intérieur de la source.
+Tant que la version normalisée manque, la colonne **Son** affiche « à normaliser » et le bouton
+d'envoi reste grisé ; **Tout envoyer** passe ces vidéos sans les envoyer. Si l'original a été
+supprimé pour gagner de la place, la vidéo normalisée seule suffit.
+
+Le script se relance sans risque : une vidéo qui a déjà sa version normalisée est sautée. La vidéo
+en cours s'écrit dans un fichier caché, `.1080p.normalizing.mp4`, renommé à la fin : l'application ne
+la voit pas tant qu'elle n'est pas finie, et une interruption ne laisse pas de vidéo tronquée prise
+pour terminée. Le script sort en erreur si une vidéo a échoué.
 
 Chaque vidéo normalisée est ensuite mesurée, et son niveau rangé dans le `metadata.json` de son
 répertoire, sans toucher aux autres champs :
@@ -277,7 +282,8 @@ répertoire, sans toucher aux autres champs :
 
 L'application l'affiche dans la colonne **Son** de la liste — *integrated* en LUFS, *true peak* en
 dBFS — en vert dans la cible, en rouge au-delà de 1 dB d'écart (-23 LUFS, et pas plus de -3 dBFS de
-pic). Un clic sur l'en-tête trie sur l'*integrated*, les vidéos non mesurées en premier. Une vidéo
+pic), et `?` pour une vidéo normalisée dont le son n'a pas pu être mesuré. Un clic sur l'en-tête trie
+sur l'*integrated*, les vidéos non mesurées en premier. Une vidéo
 déjà normalisée mais sans mesure, par une version précédente du script, est mesurée au passage
 suivant. La mesure demande `ffmpeg` et `jq`, surchargeables par `FFMPEG` et `JQ`.
 
@@ -292,14 +298,14 @@ pipx install ffmpeg-normalize
 Le binaire utilisé est `ffmpeg-normalize` du `PATH`, surchargeable :
 
 ```bash
-FFMPEG_NORMALIZE=/chemin/vers/ffmpeg-normalize scripts/normalize.sh SOURCE DESTINATION
+FFMPEG_NORMALIZE=/chemin/vers/ffmpeg-normalize scripts/normalize.sh /Volumes/BrzhCampZ1/2026
 ```
 
 La variable peut contenir une commande en plusieurs mots, pour passer par un lanceur sans rien
 installer :
 
 ```bash
-FFMPEG_NORMALIZE="uv tool run ffmpeg-normalize" scripts/normalize.sh SOURCE DESTINATION
+FFMPEG_NORMALIZE="uv tool run ffmpeg-normalize" scripts/normalize.sh /Volumes/BrzhCampZ1/2026
 ```
 
 ### Vérification du niveau sonore

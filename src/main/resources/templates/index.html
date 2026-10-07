@@ -354,8 +354,11 @@
 								Aucune description pour ce talk dans le schedule chargé.
 							</p>
 							<hr>
-							<p class="mb-0 small" ng-class="detail.loudness && !loudnessOk(detail.loudness) ? 'text-danger' : 'text-muted'">
-								<i class="fas fa-volume-high"></i> {{loudnessLabel(detail.loudness)}}
+							<p class="mb-1 small text-muted">
+								<i class="fas fa-file-video"></i> Fichier envoyé : <code>{{fileName(detail.path)}}</code>
+							</p>
+							<p class="mb-0 small" ng-class="!detail.normalized || (detail.loudness && !loudnessOk(detail.loudness)) ? 'text-danger' : 'text-muted'">
+								<i class="fas fa-volume-high"></i> {{loudnessLabel(detail)}}
 							</p>
 						</div>
 					</div>
@@ -529,21 +532,25 @@
 											</div>
 											<small ng-show="video.status == 'IN_PROGRESS'" class="text-muted">{{video.progression}}%</small>
 										</td>
-										<td class="text-nowrap font-monospace small" title="{{loudnessLabel(video.loudness)}}">
-											<span ng-if="video.loudness" ng-class="loudnessOk(video.loudness) ? 'text-success' : 'text-danger fw-semibold'">
+										<td class="text-nowrap small" title="{{loudnessLabel(video)}}">
+											<span ng-if="!video.normalized" class="text-warning-emphasis">
+												<i class="fas fa-triangle-exclamation"></i> à normaliser
+											</span>
+											<span ng-if="video.normalized && video.loudness" class="font-monospace"
+											      ng-class="loudnessOk(video.loudness) ? 'text-success' : 'text-danger fw-semibold'">
 												{{video.loudness.integrated | number:1}} / {{video.loudness.truePeak | number:1}}
 											</span>
-											<span ng-if="!video.loudness" class="text-muted opacity-50">−</span>
+											<span ng-if="video.normalized && !video.loudness" class="text-muted">?</span>
 										</td>
 										<td>
 											<div class="d-flex gap-1 justify-content-center flex-nowrap" ng-click="$event.stopPropagation()">
 												<button type="button" 
-												        title="{{canUpload() ? 'Upload' : 'Sélectionner une playlist'}}" 
+												        title="{{!video.normalized ? 'Pas encore normalisée' : canUpload() ? 'Upload' : 'Sélectionner une playlist'}}"
 												        class="btn btn-sm btn-sm-modern"
-												        ng-class="{'btn-success': canUpload(), 'btn-secondary': !canUpload()}"
+												        ng-class="{'btn-success': canUpload() && video.normalized, 'btn-secondary': !canUpload() || !video.normalized}"
 														ng-click="upload(video)" 
 														ng-show="video.status == 'NOT_STARTED' || video.status == 'FAILED'" 
-														ng-disabled="!canUpload()"
+														ng-disabled="!canUpload() || !video.normalized"
 														th:if="${connected}">
 													<i class="fas fa-cloud-upload-alt"></i>
 												</button>
