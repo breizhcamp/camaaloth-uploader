@@ -353,6 +353,10 @@
 							<p ng-if="!detail.description" class="mb-0 text-muted">
 								Aucune description pour ce talk dans le schedule chargé.
 							</p>
+							<hr>
+							<p class="mb-0 small" ng-class="detail.loudness && !loudnessOk(detail.loudness) ? 'text-danger' : 'text-muted'">
+								<i class="fas fa-volume-high"></i> {{loudnessLabel(detail.loudness)}}
+							</p>
 						</div>
 					</div>
 				</div>
@@ -478,6 +482,10 @@
 												<i class="fas fa-image"></i> <i class="fas" ng-class="sortIcon('thumbnail')"></i>
 											</span>
 										</th>
+										<th style="width: 130px;" class="text-nowrap" role="button" ng-click="sortBy('loudness')"
+										    title="Intégré (LUFS) / true peak (dBFS), mesurés après normalisation">
+											<i class="fas fa-volume-high"></i> Son <i class="fas" ng-class="sortIcon('loudness')"></i>
+										</th>
 										<th style="width: 180px;" class="text-center">Actions</th>
 									</tr>
 									</thead>
@@ -520,6 +528,12 @@
 												<div class="progress-bar-simple" style="width: {{video.progression}}%"></div>
 											</div>
 											<small ng-show="video.status == 'IN_PROGRESS'" class="text-muted">{{video.progression}}%</small>
+										</td>
+										<td class="text-nowrap font-monospace small" title="{{loudnessLabel(video.loudness)}}">
+											<span ng-if="video.loudness" ng-class="loudnessOk(video.loudness) ? 'text-success' : 'text-danger fw-semibold'">
+												{{video.loudness.integrated | number:1}} / {{video.loudness.truePeak | number:1}}
+											</span>
+											<span ng-if="!video.loudness" class="text-muted opacity-50">−</span>
 										</td>
 										<td>
 											<div class="d-flex gap-1 justify-content-center flex-nowrap" ng-click="$event.stopPropagation()">

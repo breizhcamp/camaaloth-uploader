@@ -1,12 +1,14 @@
 package org.breizhcamp.video.uploader.video.service
 
 import assertk.assertThat
+import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.breizhcamp.video.uploader.event.domain.Event
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
+import org.breizhcamp.video.uploader.video.domain.Loudness
 import org.breizhcamp.video.uploader.video.domain.PushStatus
 import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.junit.jupiter.api.BeforeEach
@@ -73,6 +75,39 @@ class VideoServiceTest {
         val reloaded = requireNotNull(service.getInformationsFrom(talkDir))
         assertThat(reloaded.status).isEqualTo(VideoInfo.Status.DONE)
         assertThat(reloaded.youtubeId).isEqualTo("abc123")
+    }
+
+    @Test
+    fun `should read the loudness written by the normalization script`() {
+        Files.writeString(
+            talkDir.resolve("metadata.json"),
+            """{"status":"NOT_STARTED","loudness":{"integrated":-23.0,"truePeak":-16.8}}""",
+        )
+
+        val reloaded = requireNotNull(service.getInformationsFrom(talkDir))
+        assertThat(reloaded.loudness).isEqualTo(Loudness(integrated = -23.0, truePeak = -16.8))
+    }
+
+    @Test
+    fun `should keep the loudness when the upload rewrites the metadata`() {
+        Files.writeString(
+            talkDir.resolve("metadata.json"),
+            """{"status":"NOT_STARTED","loudness":{"integrated":-23.0,"truePeak":-16.8}}""",
+        )
+
+        val video = requireNotNull(service.getInformationsFrom(talkDir))
+        service.updateVideo(video.apply { status = VideoInfo.Status.DONE; youtubeId = "abc123" })
+
+        val reloaded = requireNotNull(service.getInformationsFrom(talkDir))
+        assertThat(reloaded.loudness).isEqualTo(Loudness(integrated = -23.0, truePeak = -16.8))
+    }
+
+    @Test
+    fun `should leave the loudness empty for a video never normalized`() {
+        service.updateVideo(video())
+
+        assertThat(requireNotNull(service.getInformationsFrom(talkDir)).loudness).isNull()
+        assertThat(Files.readString(talkDir.resolve("metadata.json"))).doesNotContain("loudness")
     }
 
     @Test

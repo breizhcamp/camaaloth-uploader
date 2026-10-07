@@ -70,6 +70,7 @@ angular.module('videosApp', [])
 								video.descriptionStatus = body.descriptionStatus;
 								video.thumbnailStatus = body.thumbnailStatus;
 								video.thumbnail = body.thumbnail;
+								video.loudness = body.loudness;
 							}
 						}
 					}
@@ -144,6 +145,25 @@ angular.module('videosApp', [])
 		}
 	}
 
+	// ----- Son : mesuré par scripts/normalize.sh, rangé dans metadata.json -----
+
+	var TARGET_I = -23;
+	var TARGET_TP = -3;
+	// au-delà de 1 LU, l'écart s'entend au passage d'une vidéo à l'autre ; même marge sur le pic,
+	// que l'encodage AAC fait légèrement remonter après la normalisation
+	var TOLERANCE = 1;
+
+	$scope.loudnessOk = function(loudness) {
+		return Math.abs(loudness.integrated - TARGET_I) <= TOLERANCE
+			&& loudness.truePeak <= TARGET_TP + TOLERANCE;
+	}
+
+	$scope.loudnessLabel = function(loudness) {
+		if (!loudness) return 'Son non mesuré : la vidéo n\'est pas passée par scripts/normalize.sh';
+		return 'Intégré ' + loudness.integrated.toFixed(1) + ' LUFS (cible ' + TARGET_I + '), '
+			+ 'true peak ' + loudness.truePeak.toFixed(1) + ' dBFS (cible ' + TARGET_TP + ')';
+	}
+
 	// ----- Filtrage et tri, entièrement côté navigateur -----
 
 	// l'ordre des états suit l'avancement, pas l'alphabet : trier remonte ce qu'il reste à faire
@@ -171,6 +191,7 @@ angular.module('videosApp', [])
 		if (field === 'dirName') return (video.dirName || '').toLowerCase();
 		if (field === 'video') return $scope.videoState(video);
 		if (field === 'description') return video.descriptionStatus || 'NOT_STARTED';
+		if (field === 'loudness') return video.loudness ? video.loudness.integrated : null;
 		return video.thumbnailStatus || 'NOT_STARTED';
 	}
 
@@ -190,6 +211,12 @@ angular.module('videosApp', [])
 		var field = $scope.sort.field;
 		if (field === 'dirName') {
 			return valueOf(a, field).localeCompare(valueOf(b, field));
+		}
+		if (field === 'loudness') {
+			// les vidéos non mesurées d'abord, comme ce qu'il reste à faire sur les états
+			var la = valueOf(a, field), lb = valueOf(b, field);
+			var diff = la === lb ? 0 : la === null ? -1 : lb === null ? 1 : la - lb;
+			return diff !== 0 ? diff : valueOf(a, 'dirName').localeCompare(valueOf(b, 'dirName'));
 		}
 		var rank = STATE_RANK[valueOf(a, field)] - STATE_RANK[valueOf(b, field)];
 		// à état égal, l'ordre alphabétique garde la liste stable

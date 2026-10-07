@@ -15,4 +15,6 @@ data class VideoMetadata(
     /** Absent from the files written before these existed, which means nothing was pushed yet */
     val descriptionStatus: PushStatus = PushStatus.NOT_STARTED,
     val thumbnailStatus: PushStatus = PushStatus.NOT_STARTED,
+    /** Written by scripts/normalize.sh, absent until the video went through it */
+    val loudness: Loudness? = null,
 )
