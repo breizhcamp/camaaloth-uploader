@@ -71,6 +71,7 @@ angular.module('videosApp', [])
 								video.thumbnailStatus = body.thumbnailStatus;
 								video.thumbnail = body.thumbnail;
 								video.loudness = body.loudness;
+								video.normalized = body.normalized;
 							}
 						}
 					}
@@ -158,8 +159,10 @@ angular.module('videosApp', [])
 			&& loudness.truePeak <= TARGET_TP + TOLERANCE;
 	}
 
-	$scope.loudnessLabel = function(loudness) {
-		if (!loudness) return 'Son non mesuré : la vidéo n\'est pas passée par scripts/normalize.sh';
+	$scope.loudnessLabel = function(video) {
+		var loudness = video.loudness;
+		if (!video.normalized) return 'Pas encore normalisée : lancer scripts/normalize.sh, seule la version normalisée est envoyée';
+		if (!loudness) return 'Normalisée, mais son non mesuré : relancer scripts/normalize.sh';
 		return 'Intégré ' + loudness.integrated.toFixed(1) + ' LUFS (cible ' + TARGET_I + '), '
 			+ 'true peak ' + loudness.truePeak.toFixed(1) + ' dBFS (cible ' + TARGET_TP + ')';
 	}
@@ -255,6 +258,11 @@ angular.module('videosApp', [])
 		$timeout(function() {
 			bootstrap.Modal.getOrCreateInstance(document.getElementById('video-modal')).show();
 		});
+	}
+
+	// Jackson sérialise un Path en URI file:///…, seul le nom du fichier intéresse
+	$scope.fileName = function(path) {
+		return path ? decodeURIComponent(path.split('/').pop()) : '';
 	}
 
 	// les noms de répertoires contiennent espaces, parenthèses et virgules : à encoder

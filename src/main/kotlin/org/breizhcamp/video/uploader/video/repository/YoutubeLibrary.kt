@@ -45,6 +45,9 @@ class YoutubeLibrary(
     }
 
     fun insertVideo(videoInfo: VideoInfo, event: Event): YouTube.Videos.Insert? {
+        // last check before the file is read: the original recording must never reach YouTube
+        check(videoInfo.normalized) { "Refusing to upload [${videoInfo.path}]: not a normalized video" }
+
         var speakers = event.speakers
         if (speakers!!.endsWith(", ")) speakers = speakers.substring(0, speakers.length - 2)
 

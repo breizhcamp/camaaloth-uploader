@@ -60,7 +60,7 @@ class VideoService(
 
     fun getInformationsFrom(baseDirectory: Path): VideoInfo? {
         val videoInfo = VideoInfo(
-            path = (getFirstFileFromExt(baseDirectory, "mp4") ?: return null),
+            path = (normalizedVideoOf(baseDirectory) ?: return null),
             status = VideoInfo.Status.NOT_STARTED,
             thumbnail = baseDirectory.resolve("thumb.png").takeIf { it.toFile().exists() },
             eventId = PathUtils.getIdFromPath(baseDirectory.fileName.toString())
@@ -92,16 +92,26 @@ class VideoService(
     }
 
     /**
-     * List a directory to retrieve the first file with the specified extension
-     * @param dir Directory to read
-     * @param ext Extension to find
-     * @return First file found or null if any file with specified extension exists within the directory
+     * The normalized video of a talk, the only one ever uploaded: the one on disk, or else the one
+     * scripts/normalize.sh will write beside the original. Null when the directory holds no video.
+     *
+     * Hidden files are left out: a normalization in progress (.1080p.normalizing.mp4), and the
+     * ._1080p.mp4 resource forks macOS leaves on an exFAT drive. Sorted, as Files.list has no order.
      */
-    private fun getFirstFileFromExt(dir: Path, vararg ext: String): Path? {
+    private fun normalizedVideoOf(dir: Path): Path? {
         if (!Files.isDirectory(dir)) return null
 
-        val suffixes = ext.map { ".$it" }
-        return Files.list(dir).asSequence()
-            .firstOrNull { f -> suffixes.any { f.toString().lowercase().endsWith(it) } }
+        val videos = Files.list(dir).use { files ->
+            files.asSequence()
+                .filter { Files.isRegularFile(it) }
+                .map { it.fileName.toString() }
+                .filter { !it.startsWith(".") && it.lowercase().endsWith(".mp4") }
+                .sorted()
+                .toList()
+        }
+
+        val normalized = videos.firstOrNull { it.endsWith(VideoInfo.NORMALIZED_SUFFIX) }
+            ?: videos.firstOrNull()?.let { it.substring(0, it.length - ".mp4".length) + VideoInfo.NORMALIZED_SUFFIX }
+        return normalized?.let { dir.resolve(it) }
     }
 }

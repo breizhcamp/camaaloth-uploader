@@ -27,6 +27,7 @@ import org.breizhcamp.video.uploader.video.domain.VideoInfo
 import org.breizhcamp.video.uploader.video.repository.YoutubeLibrary
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
@@ -370,6 +371,41 @@ class YoutubeServiceTest {
         service.syncAllDescriptions()
 
         verify(batchProgress, timeout(1000)).step(DESCRIPTIONS_BATCH)
+    }
+
+    @Test
+    fun `should not queue a video that is not normalized yet`() {
+        val video = VideoInfo(
+            path = Paths.get("videos/talk/1080p.normalized.mp4"),
+            thumbnail = null,
+            eventId = "1183944",
+            status = VideoInfo.Status.NOT_STARTED,
+        )
+
+        service.upload(video)
+
+        assertThat(video.status).isEqualTo(VideoInfo.Status.NOT_STARTED)
+        verify(videoService, never()).updateVideo(video)
+        verify(batchProgress, never()).add(anyString(), anyString(), org.mockito.ArgumentMatchers.anyInt())
+    }
+
+    @Test
+    fun `should queue a normalized video`(@TempDir dir: java.nio.file.Path) {
+        val video = VideoInfo(
+            path = java.nio.file.Files.createFile(dir.resolve("1080p.normalized.mp4")),
+            thumbnail = null,
+            eventId = "1183944",
+            status = VideoInfo.Status.NOT_STARTED,
+        )
+
+        service.setUp()
+        try {
+            service.upload(video)
+
+            verify(videoService, timeout(1000).atLeastOnce()).updateVideo(video)
+        } finally {
+            service.tearDown()
+        }
     }
 
     private fun videoOnline(thumbnail: java.nio.file.Path?) = VideoInfo(

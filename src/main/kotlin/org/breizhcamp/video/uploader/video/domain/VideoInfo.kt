@@ -3,6 +3,7 @@ package org.breizhcamp.video.uploader.video.domain
 import com.fasterxml.jackson.annotation.JsonInclude
 
 import java.math.BigDecimal
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -10,6 +11,10 @@ import java.nio.file.Path
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class VideoInfo (
+    /**
+     * The normalized video, the only one ever uploaded. It may not exist yet, when
+     * scripts/normalize.sh has not processed the talk: see [normalized].
+     */
     val path: Path,
     val thumbnail: Path?,
     val eventId: String?,
@@ -33,6 +38,10 @@ data class VideoInfo (
         loudness = metadata.loudness
     }
 
+    /** Whether the normalized video is on disk, and so can be uploaded */
+    val normalized: Boolean
+        get() = path.fileName.toString().endsWith(NORMALIZED_SUFFIX) && Files.isRegularFile(path)
+
     /**
      * @return The name of the directory the videos is
      */
@@ -53,5 +62,10 @@ data class VideoInfo (
         DONE,
         /** If something went wrong */
         FAILED
+    }
+
+    companion object {
+        /** Written by scripts/normalize.sh beside the original: 1080p.mp4 gives 1080p.normalized.mp4 */
+        const val NORMALIZED_SUFFIX = ".normalized.mp4"
     }
 }

@@ -3,6 +3,8 @@ package org.breizhcamp.video.uploader.video.service
 import assertk.assertThat
 import assertk.assertions.doesNotContain
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import assertk.assertions.isNull
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.breizhcamp.video.uploader.event.domain.Event
@@ -36,6 +38,48 @@ class VideoServiceTest {
         `when`(fileService.recordingDir).thenReturn(dir)
 
         service = VideoService(fileService, jacksonObjectMapper(), eventService)
+    }
+
+    @Test
+    fun `should take the normalized video and never the original`() {
+        Files.createFile(talkDir.resolve("1080p.normalized.mp4"))
+
+        val video = requireNotNull(service.getInformationsFrom(talkDir))
+        assertThat(video.path).isEqualTo(talkDir.resolve("1080p.normalized.mp4"))
+        assertThat(video.normalized).isTrue()
+    }
+
+    @Test
+    fun `should point at the normalized video still to produce`() {
+        val video = requireNotNull(service.getInformationsFrom(talkDir))
+
+        assertThat(video.path).isEqualTo(talkDir.resolve("1080p.normalized.mp4"))
+        assertThat(video.normalized).isFalse()
+    }
+
+    @Test
+    fun `should not take a normalization in progress nor a macOS resource fork for the video`() {
+        Files.createFile(talkDir.resolve(".1080p.normalizing.mp4"))
+        Files.createFile(talkDir.resolve("._1080p.normalized.mp4"))
+
+        val video = requireNotNull(service.getInformationsFrom(talkDir))
+        assertThat(video.path).isEqualTo(talkDir.resolve("1080p.normalized.mp4"))
+        assertThat(video.normalized).isFalse()
+    }
+
+    @Test
+    fun `should keep listing a video whose original was removed`() {
+        Files.delete(talkDir.resolve("1080p.mp4"))
+        Files.createFile(talkDir.resolve("1080p.normalized.mp4"))
+
+        assertThat(requireNotNull(service.getInformationsFrom(talkDir)).normalized).isTrue()
+    }
+
+    @Test
+    fun `should skip a directory without any video`() {
+        Files.delete(talkDir.resolve("1080p.mp4"))
+
+        assertThat(service.getInformationsFrom(talkDir)).isNull()
     }
 
     @Test

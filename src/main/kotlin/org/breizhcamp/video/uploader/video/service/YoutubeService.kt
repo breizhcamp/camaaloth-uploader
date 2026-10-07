@@ -190,6 +190,10 @@ class YoutubeService(
      * @param videoInfo Video to upload
      */
     fun upload(videoInfo: VideoInfo) {
+        if (!videoInfo.normalized) {
+            logger.warn { "[${videoInfo.dirName}] Not normalized yet, not uploaded: run scripts/normalize.sh" }
+            return
+        }
         uploader.uploadVideo(videoInfo)
     }
 

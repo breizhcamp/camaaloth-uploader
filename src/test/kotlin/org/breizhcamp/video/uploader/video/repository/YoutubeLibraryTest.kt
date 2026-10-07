@@ -267,6 +267,16 @@ class YoutubeLibraryTest {
         assertThat(snippet.description).isEqualTo("")
     }
 
+    @Test
+    fun `should refuse to upload a video that is not normalized`(@TempDir dir: Path) {
+        val original = Files.createFile(dir.resolve("1080p.mp4"))
+        val videoInfo = VideoInfo(path = original, thumbnail = null, eventId = "1183944", status = VideoInfo.Status.NOT_STARTED)
+
+        assertThrows<IllegalStateException> {
+            YoutubeLibrary(transport, jsonFactory, newFlow(dir)).insertVideo(videoInfo, Event(id = "1183944"))
+        }
+    }
+
     /** Build the insert request the uploader would send, and read back the title it carries */
     private fun titleOf(dir: Path, name: String, speakers: String): String =
         snippetOf(dir, name, speakers).title
@@ -274,7 +284,7 @@ class YoutubeLibraryTest {
     private fun snippetOf(dir: Path, name: String, speakers: String, description: String? = null): VideoSnippet {
         val flow = newFlow(dir)
         storeCredential(flow, refreshToken = "stored-refresh", expiresInSeconds = 3600)
-        val video = Files.createFile(dir.resolve("1080p.mp4"))
+        val video = Files.createFile(dir.resolve("1080p.normalized.mp4"))
         val videoInfo = VideoInfo(
             path = video,
             thumbnail = null,
