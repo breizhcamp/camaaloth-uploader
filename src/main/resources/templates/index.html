@@ -262,6 +262,13 @@
 									<i class="fas fa-box-archive"></i> Sauvegarder les métadata
 								</button>
 							</form>
+
+							<button th:if="${dirExists}" type="button" id="resetYoutubeMetadata"
+							        class="btn btn-outline-danger btn-modern w-100"
+							        data-bs-toggle="modal" data-bs-target="#reset-modal"
+							        title="Oublier tous les uploads, pour tout renvoyer sur YouTube">
+								<i class="fas fa-trash"></i> Supprimer les métadonnées YouTube
+							</button>
 						</div>
 
 						<div th:if="${backupMessage}" class="alert alert-compact mt-3 mb-0"
@@ -376,6 +383,44 @@
 							</p>
 						</div>
 					</div>
+				</div>
+			</div>
+
+			<!-- Asks for the phrase before forgetting every upload, the server checks it again -->
+			<div class="modal fade" id="reset-modal" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog modal-dialog-centered">
+					<form class="modal-content" method="post" th:action="@{/resetYoutubeMetadata}">
+						<div class="modal-header">
+							<h5 class="modal-title text-danger">
+								<i class="fas fa-triangle-exclamation"></i> Supprimer les métadonnées YouTube
+							</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+						</div>
+						<div class="modal-body">
+							<p>Dans tous les fichiers <code>.json</code> du répertoire des vidéos :</p>
+							<ul>
+								<li>les <code>youtubeId</code> et <code>video_url</code> sont effacés&nbsp;;</li>
+								<li>chaque vidéo repasse à «&nbsp;à envoyer&nbsp;», avec sa description et sa miniature.</li>
+							</ul>
+							<p>
+								Les vidéos déjà en ligne <strong>restent sur YouTube</strong>&nbsp;: les renvoyer créera
+								des doublons. Une sauvegarde des <code>.json</code> est faite juste avant.
+							</p>
+							<label for="reset-confirmation" class="form-label">Pour confirmer, recopier&nbsp;:</label>
+							<p class="fst-italic user-select-none mb-2">{{resetPhrase}}</p>
+							<input type="text" class="form-control" id="reset-confirmation" name="confirmation"
+							       autocomplete="off" ng-model="reset.confirmation">
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-outline-secondary btn-modern" data-bs-dismiss="modal">
+								Annuler
+							</button>
+							<button type="submit" class="btn btn-danger btn-modern"
+							        ng-disabled="reset.confirmation.trim() !== resetPhrase">
+								<i class="fas fa-trash"></i> Sauvegarder puis supprimer
+							</button>
+						</div>
+					</form>
 				</div>
 			</div>
 
@@ -693,6 +738,7 @@
 		window.hasPlaylist = [[${connected && ytSession.curPlaylist != null}]];
 		window.currentPlaylist = [[${ytSession.curPlaylist?.snippet?.title}]];
 		window.batches = [[${batches}]];
+		window.resetPhrase = [[${resetPhrase}]];
 	</script>
 	<!-- Custom JS -->
 	<script th:src="@{'/js/index.js'}"></script>

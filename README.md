@@ -78,6 +78,18 @@ fichiers cachés sont ignorés (`._metadata.json` de macOS, `.datastore` du toke
 boutons donne le nombre de fichiers et le nom du zip. À faire avant une manipulation risquée, comme
 le `jq` des *Tips and tricks* : pour revenir en arrière, `unzip -o` du zip dans `recordingDir`.
 
+**Supprimer les métadonnées YouTube** fait oublier tous les uploads, pour tout renvoyer depuis le
+début. Dans chaque `.json` de `recordingDir`, `youtubeId` et `video_url` sont effacés où qu'ils
+soient, et chaque `metadata.json` repasse à `NOT_STARTED`, sans `progression`, `descriptionStatus`
+ni `thumbnailStatus`. Le reste est gardé : `loudness`, `playlist.json`, les autres champs du schedule
+exporté. Les vidéos déjà en ligne **restent sur YouTube** : les renvoyer crée des doublons.
+
+L'opération demande de recopier *« Oui, je suis bien un boulet et je veux reprendre les uploads à
+zéro »*, vérifié aussi côté serveur. Elle commence par la même sauvegarde que le bouton précédent,
+et ne touche à rien si celle-ci échoue. Elle est refusée pendant qu'une opération longue tourne : un
+upload en cours réécrirait son `youtubeId` juste après. Un fichier illisible est laissé tel quel, et
+signalé dans le message.
+
 #### YouTube
 
 **S'authentifier sur YouTube** ouvre le consentement Google, avec sélecteur de compte. Une fois

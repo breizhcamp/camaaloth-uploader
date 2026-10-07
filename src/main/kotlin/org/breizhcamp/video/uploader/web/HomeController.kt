@@ -4,6 +4,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.file.service.MetadataBackupService
+import org.breizhcamp.video.uploader.file.service.YoutubeMetadataReset
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
 import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.config.PathsReport
@@ -14,6 +15,7 @@ import org.springframework.ui.Model
 import org.springframework.ui.set
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import java.nio.file.Files
 
@@ -27,6 +29,7 @@ class HomeController(
     private val batchProgress: BatchProgressTracker,
     private val pathsReport: PathsReport,
     private val metadataBackup: MetadataBackupService,
+    private val youtubeMetadataReset: YoutubeMetadataReset,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -49,6 +52,7 @@ class HomeController(
         model["ytSession"] = youtubeSession
         //grouped here rather than in the template, Thymeleaf has no comfortable way to group a list
         model["paths"] = pathsReport.entries().groupBy { it.group }
+        model["resetPhrase"] = RESET_PHRASE
 
         return "index"
     }
@@ -95,6 +99,42 @@ class HomeController(
         return "redirect:/"
     }
 
+    /**
+     * Forget every upload to YouTube, after a backup. Checked here and not only in the page: the
+     * phrase is what stands between a misclick and a whole edition to upload again.
+     */
+    @PostMapping("/resetYoutubeMetadata")
+    fun resetYoutubeMetadata(@RequestParam confirmation: String, redirect: RedirectAttributes): String {
+        //an upload in progress would write its youtubeId back right after the reset
+        val running = batchProgress.running()
+        val (message, failed) = when {
+            confirmation.trim() != RESET_PHRASE ->
+                "Confirmation incorrecte : rien n'a été supprimé" to true
+            running.isNotEmpty() ->
+                "Une opération est en cours (${running.joinToString { it.label }}) : rien n'a été supprimé" to true
+            else -> try {
+                describe(youtubeMetadataReset.reset())
+            } catch (e: Exception) {
+                logger.error(e) { "Cannot reset the YouTube metadata" }
+                "Sauvegarde impossible, rien n'a été supprimé : ${e.cause?.message ?: e.message}" to true
+            }
+        }
+        redirect.addFlashAttribute("backupMessage", message)
+        redirect.addFlashAttribute("backupFailed", failed)
+        return "redirect:/"
+    }
+
+    private fun describe(result: YoutubeMetadataReset.Result): Pair<String, Boolean> {
+        val backup = result.backup ?: return "Aucun fichier .json : rien à supprimer" to true
+        val done = "Métadonnées YouTube supprimées de ${result.cleaned} fichiers, " +
+            "sauvegardés avant dans ${backup.zip.fileName}"
+        if (result.failed.isEmpty()) return done to false
+
+        val root = fileService.recordingDir
+        val names = result.failed.joinToString { root.relativize(it).toString() }
+        return "$done. Illisibles, laissés tels quels : $names" to true
+    }
+
     @PostMapping("/fixMissingIdsInSchedule")
     fun fixMissingIdsInSchedule(): String {
         logger.info { "Fix missing ids in schedule" }
@@ -102,4 +142,7 @@ class HomeController(
         return "redirect:./"
     }
 
+    companion object {
+        const val RESET_PHRASE = "Oui, je suis bien un boulet et je veux reprendre les uploads à zéro"
+    }
 }

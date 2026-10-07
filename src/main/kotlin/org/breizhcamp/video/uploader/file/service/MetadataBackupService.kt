@@ -29,7 +29,7 @@ class MetadataBackupService(
     /** @return the backup written, or null when there was no .json file to save */
     fun backup(): Backup? {
         val root = fileService.recordingDir
-        val files = jsonFilesIn(root)
+        val files = jsonFiles()
         if (files.isEmpty()) return null
 
         val zip = root.resolve("metadata-backup-${LocalDateTime.now(clock).format(TIMESTAMP)}.zip")
@@ -57,13 +57,13 @@ class MetadataBackupService(
      * Hidden files and directories are left out: the ._metadata.json resource forks macOS leaves on
      * an exFAT drive, and the .datastore holding the YouTube token when it shares the directory.
      */
-    private fun jsonFilesIn(root: Path): List<Path> = Files.walk(root).use { paths ->
+    fun jsonFiles(): List<Path> = fileService.recordingDir.let { root -> Files.walk(root).use { paths ->
         paths.asSequence()
             .filter { Files.isRegularFile(it) && it.name.lowercase().endsWith(".json") }
             .filter { file -> root.relativize(file).none { it.name.startsWith(".") } }
             .sorted()
             .toList()
-    }
+    } }
 
     companion object {
         private val TIMESTAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")

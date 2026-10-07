@@ -26,6 +26,10 @@ angular.module('videosApp', [])
 	$scope.currentPlaylist = window.currentPlaylist || null;
 	$scope.batches = window.batches || [];
 
+	// la phrase à recopier avant de supprimer les métadonnées YouTube, à recopier et non à coller
+	$scope.resetPhrase = window.resetPhrase;
+	$scope.reset = {confirmation: ''};
+
 	// pourcentage d'avancement d'un lot, pour la largeur de la barre
 	$scope.percent = function(batch) {
 		if (!batch.total) return 0;

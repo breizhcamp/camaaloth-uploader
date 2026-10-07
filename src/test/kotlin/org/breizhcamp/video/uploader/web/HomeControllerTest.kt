@@ -5,7 +5,9 @@ import com.google.api.services.youtube.model.Playlist
 import org.breizhcamp.video.uploader.event.service.EventService
 import org.breizhcamp.video.uploader.file.service.FileService
 import org.breizhcamp.video.uploader.file.service.MetadataBackupService
+import org.breizhcamp.video.uploader.file.service.YoutubeMetadataReset
 import org.breizhcamp.video.uploader.shared.session.YoutubeSession
+import org.breizhcamp.video.uploader.shared.batch.BatchProgress
 import org.breizhcamp.video.uploader.shared.batch.BatchProgressTracker
 import org.breizhcamp.video.uploader.shared.config.PathsReport
 import org.breizhcamp.video.uploader.video.service.VideoService
@@ -13,6 +15,7 @@ import org.breizhcamp.video.uploader.video.service.YoutubeService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.test.web.servlet.MockMvc
@@ -32,6 +35,7 @@ class HomeControllerTest {
     private val batchProgress = mock(BatchProgressTracker::class.java)
     private val pathsReport = mock(PathsReport::class.java)
     private val metadataBackup = mock(MetadataBackupService::class.java)
+    private val youtubeMetadataReset = mock(YoutubeMetadataReset::class.java)
     private lateinit var mockMvc: MockMvc
 
     @BeforeEach
@@ -50,6 +54,7 @@ class HomeControllerTest {
                 batchProgress,
                 pathsReport,
                 metadataBackup,
+                youtubeMetadataReset,
             )
         ).build()
     }
@@ -174,6 +179,63 @@ class HomeControllerTest {
 
         mockMvc.perform(post("/backupMetadata"))
             .andExpect(flash().attribute("backupMessage", "Sauvegarde impossible : No space left on device"))
+            .andExpect(flash().attribute("backupFailed", true))
+    }
+
+    @Test
+    fun `should not reset the YouTube metadata without the exact confirmation`() {
+        mockMvc.perform(post("/resetYoutubeMetadata").param("confirmation", "oui"))
+            .andExpect(redirectedUrl("/"))
+            .andExpect(flash().attribute("backupMessage", "Confirmation incorrecte : rien n'a été supprimé"))
+            .andExpect(flash().attribute("backupFailed", true))
+
+        verify(youtubeMetadataReset, never()).reset()
+    }
+
+    @Test
+    fun `should not reset the YouTube metadata while an operation is running`() {
+        `when`(batchProgress.running()).thenReturn(listOf(BatchProgress("uploads", "Envoi des vidéos", 3, 1)))
+
+        mockMvc.perform(post("/resetYoutubeMetadata").param("confirmation", HomeController.RESET_PHRASE))
+            .andExpect(flash().attribute("backupMessage", "Une opération est en cours (Envoi des vidéos) : rien n'a été supprimé"))
+
+        verify(youtubeMetadataReset, never()).reset()
+    }
+
+    @Test
+    fun `should reset the YouTube metadata once confirmed, and tell where the backup went`() {
+        `when`(youtubeMetadataReset.reset()).thenReturn(
+            YoutubeMetadataReset.Result(
+                backup = MetadataBackupService.Backup(Paths.get("videos/metadata-backup-20261007-214512.zip"), files = 97),
+                cleaned = 95,
+                failed = emptyList(),
+            )
+        )
+
+        mockMvc.perform(post("/resetYoutubeMetadata").param("confirmation", HomeController.RESET_PHRASE))
+            .andExpect(flash().attribute(
+                "backupMessage",
+                "Métadonnées YouTube supprimées de 95 fichiers, sauvegardés avant dans metadata-backup-20261007-214512.zip",
+            ))
+            .andExpect(flash().attribute("backupFailed", false))
+    }
+
+    @Test
+    fun `should name the files the reset could not read`() {
+        `when`(youtubeMetadataReset.reset()).thenReturn(
+            YoutubeMetadataReset.Result(
+                backup = MetadataBackupService.Backup(Paths.get("videos/metadata-backup-20261007-214512.zip"), files = 2),
+                cleaned = 1,
+                failed = listOf(Paths.get("videos/talk/metadata.json")),
+            )
+        )
+
+        mockMvc.perform(post("/resetYoutubeMetadata").param("confirmation", HomeController.RESET_PHRASE))
+            .andExpect(flash().attribute(
+                "backupMessage",
+                "Métadonnées YouTube supprimées de 1 fichiers, sauvegardés avant dans metadata-backup-20261007-214512.zip. " +
+                    "Illisibles, laissés tels quels : talk/metadata.json",
+            ))
             .andExpect(flash().attribute("backupFailed", true))
     }
 
