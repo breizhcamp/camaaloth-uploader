@@ -76,6 +76,7 @@ angular.module('videosApp', [])
 								video.thumbnail = body.thumbnail;
 								video.loudness = body.loudness;
 								video.normalized = body.normalized;
+								video.hasOriginal = body.hasOriginal;
 							}
 						}
 					}
@@ -262,6 +263,42 @@ angular.module('videosApp', [])
 		$timeout(function() {
 			bootstrap.Modal.getOrCreateInstance(document.getElementById('video-modal')).show();
 		});
+	}
+
+	// l'original et la normalisée côte à côte, à la place du détail : bootstrap n'empile pas les fenêtres
+	$scope.showPlayers = function(video) {
+		$scope.player = video;
+		bootstrap.Modal.getOrCreateInstance(document.getElementById('video-modal')).hide();
+		$timeout(function() {
+			bootstrap.Modal.getOrCreateInstance(document.getElementById('player-modal')).show();
+		});
+	}
+
+	var playerModal = document.getElementById('player-modal');
+	// retirer les lecteurs du dom arrête la lecture et le téléchargement de la vidéo
+	playerModal.addEventListener('hidden.bs.modal', function() {
+		$scope.$apply(function() { $scope.player = null; });
+	});
+	// un seul son à la fois : lancer un lecteur met l'autre en pause
+	playerModal.addEventListener('play', function(event) {
+		playerModal.querySelectorAll('video').forEach(function(other) {
+			if (other !== event.target) other.pause();
+		});
+	}, true);
+
+	// pour comparer : reprend sur l'autre version là où en était celle qui jouait
+	$scope.switchPlayer = function() {
+		var original = document.getElementById('player-original');
+		var normalized = document.getElementById('player-normalized');
+		var from = original.paused ? normalized : original;
+		var to = from === original ? normalized : original;
+		to.currentTime = from.currentTime;
+		from.pause();
+		to.play();
+	}
+
+	$scope.videoUrl = function(video, original) {
+		return '/video?dir=' + encodeURIComponent(video.dirName) + (original ? '&original=true' : '');
 	}
 
 	// Jackson sérialise un Path en URI file:///…, seul le nom du fichier intéresse

@@ -156,6 +156,14 @@
 			white-space: pre-wrap;
 		}
 
+		.detail-thumb {
+			display: block;
+			width: 100%;
+			max-width: 480px;
+			border: 1px solid #dee2e6;
+			border-radius: 6px;
+		}
+
 		.thumb-hover {
 			position: relative;
 		}
@@ -370,6 +378,10 @@
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
 						</div>
 						<div class="modal-body">
+							<img ng-if="detail.thumbnail" ng-src="{{thumbUrl(detail)}}" class="detail-thumb mb-3" alt="Miniature">
+							<p ng-if="!detail.thumbnail" class="small text-muted">
+								<i class="fas fa-image"></i> Pas encore de miniature générée.
+							</p>
 							<p ng-if="detail.description" class="mb-0 video-description">{{detail.description}}</p>
 							<p ng-if="!detail.description" class="mb-0 text-muted">
 								Aucune description pour ce talk dans le schedule chargé.
@@ -381,6 +393,51 @@
 							<p class="mb-0 small" ng-class="!detail.normalized || (detail.loudness && !loudnessOk(detail.loudness)) ? 'text-danger' : 'text-muted'">
 								<i class="fas fa-volume-high"></i> {{loudnessLabel(detail)}}
 							</p>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-outline-primary btn-modern"
+							        ng-disabled="!detail.normalized && !detail.hasOriginal" ng-click="showPlayers(detail)">
+								<i class="fas fa-headphones"></i> Écouter l'original et la version normalisée
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Both versions of a talk, to hear what the normalization did -->
+			<div class="modal fade" id="player-modal" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog modal-xl">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title"><i class="fas fa-headphones"></i> {{player.dirName}}</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+						</div>
+						<!-- only in the dom while open: closing it stops the playback and the download -->
+						<div class="modal-body" ng-if="player">
+							<div class="row g-3">
+								<div class="col-md-6">
+									<h6><i class="fas fa-microphone"></i> Original</h6>
+									<video id="player-original" ng-if="player.hasOriginal" ng-src="{{videoUrl(player, true)}}"
+									       controls preload="metadata" class="w-100"></video>
+									<p ng-if="!player.hasOriginal" class="text-muted">Pas de fichier original.</p>
+								</div>
+								<div class="col-md-6">
+									<h6>
+										<i class="fas fa-volume-high"></i> Normalisée
+										<small class="text-muted fw-normal" ng-if="player.normalized">{{loudnessLabel(player)}}</small>
+									</h6>
+									<video id="player-normalized" ng-if="player.normalized" ng-src="{{videoUrl(player, false)}}"
+									       controls preload="metadata" class="w-100"></video>
+									<p ng-if="!player.normalized" class="text-muted">Pas encore normalisée.</p>
+								</div>
+							</div>
+						</div>
+						<div class="modal-footer justify-content-between">
+							<small class="text-muted">Lancer l'une met l'autre en pause.</small>
+							<button type="button" class="btn btn-outline-primary btn-modern"
+							        ng-disabled="!player.hasOriginal || !player.normalized" ng-click="switchPlayer()">
+								<i class="fas fa-right-left"></i> Basculer sur l'autre, au même instant
+							</button>
 						</div>
 					</div>
 				</div>

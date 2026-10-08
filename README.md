@@ -130,6 +130,15 @@ faire et bouton cassé se ressemblent trop pour laisser le doute.
 
 **Tout envoyer** exige qu'une playlist soit sélectionnée.
 
+Un clic sur une ligne ouvre le détail du talk : miniature, description tirée du schedule, fichier
+envoyé et niveau sonore. « Aucune description pour ce talk dans le schedule chargé » veut dire que
+`<assetsDir>/schedule.json` est introuvable (le log dit alors `Cannot read the schedule`) ou ne
+contient pas ce talk : vérifier `--camaaloth-uploader.assetsDir`.
+
+**Écouter l'original et la version normalisée** ouvre les deux vidéos côte à côte. Lancer l'une met
+l'autre en pause, et **Basculer sur l'autre, au même instant** permet de comparer le son au même
+passage.
+
 #### Filtrer et trier
 
 Au-dessus du tableau : un champ **Nom** et une liste par état, cumulables, avec un compteur

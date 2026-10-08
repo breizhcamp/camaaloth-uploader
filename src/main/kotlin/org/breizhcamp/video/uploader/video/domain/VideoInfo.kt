@@ -1,5 +1,6 @@
 package org.breizhcamp.video.uploader.video.domain
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 
 import java.math.BigDecimal
@@ -41,6 +42,15 @@ data class VideoInfo (
     /** Whether the normalized video is on disk, and so can be uploaded */
     val normalized: Boolean
         get() = path.fileName.toString().endsWith(NORMALIZED_SUFFIX) && Files.isRegularFile(path)
+
+    /** The recording [path] was normalized from, kept untouched beside it: 1080p.mp4 for 1080p.normalized.mp4 */
+    @get:JsonIgnore
+    val originalPath: Path
+        get() = path.resolveSibling(path.fileName.toString().removeSuffix(NORMALIZED_SUFFIX) + ".mp4")
+
+    /** Whether the original recording is on disk, to be played beside the normalized one */
+    val hasOriginal: Boolean
+        get() = Files.isRegularFile(originalPath)
 
     /**
      * @return The name of the directory the videos is
