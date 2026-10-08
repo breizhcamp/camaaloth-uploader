@@ -3,8 +3,10 @@
 ### Téléchargement du schedule.json
 
 ```bash
-./fetch-schedule.sh
+./fetch-schedule.sh /Volumes/BrzhCampZ1/2026/assets   # défaut : videos/assets
 ```
+
+Le schedule va dans le répertoire `assets` des vidéos, là où l'application le cherche par défaut.
 
 ### Configuration auth YT
 
@@ -51,7 +53,9 @@ Le lien d'authentification YouTube renvoie vers le consentement Google ; le toke
 dans `./videos/.datastore` et réutilisé aux lancements suivants.
 
 Par défaut l'application lit les vidéos dans `videos/` et les assets (`schedule.json`, `thumb.svg`)
-dans `assets/`.
+dans le sous-répertoire `assets/` des vidéos : avec `--camaaloth-uploader.recordingDir=/Volumes/BrzhCampZ1/2026`,
+c'est `/Volumes/BrzhCampZ1/2026/assets`. Chaque édition emporte ainsi son schedule et son modèle de
+miniature.
 
 ### Utiliser l'interface
 
@@ -73,7 +77,7 @@ Dans l'ordre d'un début d'édition :
 
 À tout moment, **Sauvegarder les métadata** zippe tous les `.json` de `recordingDir`, à toute
 profondeur — les `metadata.json` qui portent l'état de chaque upload, `playlist.json`, l'export
-`schedule.json` — dans un `metadata-backup-AAAAMMJJ-HHMMSS.zip` posé dans ce même répertoire. Les
+`schedule.json`, les `.json` de `assets/` — dans un `metadata-backup-AAAAMMJJ-HHMMSS.zip` posé dans ce même répertoire. Les
 fichiers cachés sont ignorés (`._metadata.json` de macOS, `.datastore` du token). Un message sous les
 boutons donne le nombre de fichiers et le nom du zip. À faire avant une manipulation risquée, comme
 le `jq` des *Tips and tricks* : pour revenir en arrière, `unzip -o` du zip dans `recordingDir`.
@@ -82,7 +86,8 @@ le `jq` des *Tips and tricks* : pour revenir en arrière, `unzip -o` du zip dans
 début. Dans chaque `.json` de `recordingDir`, `youtubeId` et `video_url` sont effacés où qu'ils
 soient, et chaque `metadata.json` repasse à `NOT_STARTED`, sans `progression`, `descriptionStatus`
 ni `thumbnailStatus`. Le reste est gardé : `loudness`, `playlist.json`, les autres champs du schedule
-exporté. Les vidéos déjà en ligne **restent sur YouTube** : les renvoyer crée des doublons.
+exporté. `assets/` étant dans `recordingDir`, son `schedule.json` perd aussi ses `video_url`. Les
+vidéos déjà en ligne **restent sur YouTube** : les renvoyer crée des doublons.
 
 L'opération demande de recopier *« Oui, je suis bien un boulet et je veux reprendre les uploads à
 zéro »*, vérifié aussi côté serveur. Elle commence par la même sauvegarde que le bouton précédent,
@@ -133,7 +138,7 @@ faire et bouton cassé se ressemblent trop pour laisser le doute.
 Un clic sur une ligne ouvre le détail du talk : miniature, description tirée du schedule, fichier
 envoyé et niveau sonore. « Aucune description pour ce talk dans le schedule chargé » veut dire que
 `<assetsDir>/schedule.json` est introuvable (le log dit alors `Cannot read the schedule`) ou ne
-contient pas ce talk : vérifier `--camaaloth-uploader.assetsDir`.
+contient pas ce talk : vérifier `<recordingDir>/assets/schedule.json`, ou `--camaaloth-uploader.assetsDir`.
 
 **Écouter l'original et la version normalisée** ouvre les deux vidéos côte à côte. Lancer l'une met
 l'autre en pause, et **Basculer sur l'autre, au même instant** permet de comparer le son au même
@@ -205,7 +210,7 @@ INKSCAPE_PATH=/chemin/vers/inkscape       # variable d'environnement
 
 ```
 --camaaloth-uploader.recordingDir=REPERTOIRE   # vidéos à traiter (défaut: videos)
---camaaloth-uploader.assetsDir=REPERTOIRE      # schedule.json et thumb.svg (défaut: assets)
+--camaaloth-uploader.assetsDir=REPERTOIRE      # schedule.json et thumb.svg (défaut: <recordingDir>/assets)
 --videos.dir=REPERTOIRE                        # emplacement du .datastore du token (défaut: ./videos)
 --server.port=PORT                             # port HTTP (défaut: 8080)
 --oauth-google-path /chemin/oauth-google.json
@@ -218,18 +223,20 @@ vidéos ne déplace pas le token, et inversement.
 
 ### Traiter une autre édition
 
-L'application ne lit qu'un seul schedule : `<assetsDir>/schedule.json`. Pour reprendre les vidéos
-d'une édition passée, lui donner son propre répertoire d'assets plutôt que d'écraser le courant :
+L'application ne lit qu'un seul schedule : `<assetsDir>/schedule.json`, par défaut
+`<recordingDir>/assets/schedule.json`. Pour reprendre les vidéos d'une édition passée, mettre ses
+assets à côté de ses vidéos, et seul `recordingDir` change :
 
 ```bash
-mkdir -p assets-2025
-cp 2025-schedule.json assets-2025/schedule.json    # le nom du fichier compte
-cp assets/thumb.svg   assets-2025/                 # modèle de l'époque si tu l'as
+mkdir -p /chemin/vers/les/videos/2025/assets
+cp 2025-schedule.json /chemin/vers/les/videos/2025/assets/schedule.json   # le nom du fichier compte
+cp thumb.svg          /chemin/vers/les/videos/2025/assets/                # modèle de l'époque
 
 java -jar build/libs/camaaloth-uploader-0.0.1-SNAPSHOT.jar \
-  --camaaloth-uploader.assetsDir=assets-2025 \
   --camaaloth-uploader.recordingDir=/chemin/vers/les/videos/2025
 ```
+
+`--camaaloth-uploader.assetsDir` reste là pour des assets rangés ailleurs.
 
 Un event absent du schedule chargé est signalé ainsi, et la vidéo est sautée :
 
@@ -252,6 +259,8 @@ Dans `recordingDir` :
 playlist.json                la playlist sélectionnée
 metadata-backup-*.zip        les sauvegardes du bouton « Sauvegarder les métadata »
 schedule.json                l'export du bouton « Exporter schedule.json »
+assets/schedule.json         le schedule lu, à ne pas confondre avec l'export ci-dessus
+assets/thumb.svg             le modèle des miniatures
 ```
 
 Un `metadata.json` complet :
