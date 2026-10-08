@@ -164,6 +164,25 @@
 			border-radius: 6px;
 		}
 
+		.player-video {
+			display: block;
+			background: black;
+			border-radius: 6px;
+			cursor: pointer;
+		}
+
+		.player-inactive {
+			opacity: .7;
+		}
+
+		.sound-meter {
+			display: block;
+			height: 90px;
+			margin-top: .5rem;
+			border-radius: 6px;
+			background: #212529;
+		}
+
 		.thumb-hover {
 			position: relative;
 		}
@@ -374,6 +393,16 @@
 				<div class="modal-dialog modal-lg modal-dialog-scrollable">
 					<div class="modal-content">
 						<div class="modal-header">
+							<div class="btn-group btn-group-sm me-3">
+								<button type="button" class="btn btn-outline-secondary" title="Talk précédent (←)"
+								        ng-disabled="!neighbor(detail, -1)" ng-click="go(-1)">
+									<i class="fas fa-chevron-left"></i>
+								</button>
+								<button type="button" class="btn btn-outline-secondary" title="Talk suivant (→)"
+								        ng-disabled="!neighbor(detail, 1)" ng-click="go(1)">
+									<i class="fas fa-chevron-right"></i>
+								</button>
+							</div>
 							<h5 class="modal-title"><i class="fas fa-video"></i> {{detail.dirName}}</h5>
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
 						</div>
@@ -409,35 +438,67 @@
 				<div class="modal-dialog modal-xl">
 					<div class="modal-content">
 						<div class="modal-header">
+							<div class="btn-group btn-group-sm me-3">
+								<button type="button" class="btn btn-outline-secondary" title="Talk précédent (←)"
+								        ng-disabled="!neighbor(player, -1)" ng-click="go(-1)">
+									<i class="fas fa-chevron-left"></i>
+								</button>
+								<button type="button" class="btn btn-outline-secondary" title="Talk suivant (→)"
+								        ng-disabled="!neighbor(player, 1)" ng-click="go(1)">
+									<i class="fas fa-chevron-right"></i>
+								</button>
+							</div>
 							<h5 class="modal-title"><i class="fas fa-headphones"></i> {{player.dirName}}</h5>
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
 						</div>
 						<!-- only in the dom while open: closing it stops the playback and the download -->
 						<div class="modal-body" ng-if="player">
 							<div class="row g-3">
-								<div class="col-md-6">
-									<h6><i class="fas fa-microphone"></i> Original</h6>
-									<video id="player-original" ng-if="player.hasOriginal" ng-src="{{videoUrl(player, true)}}"
-									       controls preload="metadata" class="w-100"></video>
-									<p ng-if="!player.hasOriginal" class="text-muted">Pas de fichier original.</p>
-								</div>
-								<div class="col-md-6">
-									<h6>
-										<i class="fas fa-volume-high"></i> Normalisée
-										<small class="text-muted fw-normal" ng-if="player.normalized">{{loudnessLabel(player)}}</small>
+								<div class="col-md-6" ng-repeat="side in sides">
+									<h6 role="button" class="text-truncate" ng-click="listenTo(side.key)"
+									    ng-class="transport.active === side.key ? 'text-primary' : 'text-muted'">
+										<i class="fas" ng-class="side.icon"></i> {{side.label}}
+										<span ng-if="transport.active === side.key" class="badge text-bg-primary ms-1">à l'écoute</span>
+										<small class="fw-normal text-muted" ng-if="side.key === 'normalized' && player.normalized"
+										       title="{{loudnessLabel(player)}}">
+											{{loudnessLabel(player)}}
+										</small>
 									</h6>
-									<video id="player-normalized" ng-if="player.normalized" ng-src="{{videoUrl(player, false)}}"
-									       controls preload="metadata" class="w-100"></video>
-									<p ng-if="!player.normalized" class="text-muted">Pas encore normalisée.</p>
+									<div ng-if="available(side.key)">
+										<video id="player-{{side.key}}" ng-src="{{videoUrl(player, side.key === 'original')}}"
+										       preload="metadata" class="w-100 player-video" ng-click="clickVideo(side.key)"
+										       ng-class="{'player-inactive': transport.active !== side.key}"></video>
+										<canvas id="meter-{{side.key}}" class="sound-meter w-100"
+										        title="Crête (clair) et RMS (foncé) en dBFS, repères à -3 et -23"></canvas>
+									</div>
+									<p ng-if="!available(side.key)" class="text-muted">{{side.missing}}</p>
+								</div>
+							</div>
+
+							<div class="d-flex align-items-center gap-2 mt-3">
+								<button type="button" class="btn btn-primary btn-sm" ng-click="togglePlay()"
+								        title="Lecture / pause (espace)">
+									<i class="fas" ng-class="transport.playing ? 'fa-pause' : 'fa-play'"></i>
+								</button>
+								<span class="font-monospace small">{{formatTime(transport.time)}}</span>
+								<!-- driven from the script: ng-model on a range seeks by itself whenever max changes -->
+								<input type="range" class="form-range flex-grow-1" id="player-seek" min="0" max="0" step="0.1" value="0">
+								<span class="font-monospace small text-muted">{{formatTime(transport.duration)}}</span>
+								<div class="btn-group btn-group-sm ms-2">
+									<button type="button" class="btn" ng-repeat="side in sides"
+									        ng-class="transport.active === side.key ? 'btn-primary' : 'btn-outline-primary'"
+									        ng-disabled="!available(side.key)" ng-click="listenTo(side.key)">
+										{{side.label}}
+									</button>
 								</div>
 							</div>
 						</div>
-						<div class="modal-footer justify-content-between">
-							<small class="text-muted">Lancer l'une met l'autre en pause.</small>
-							<button type="button" class="btn btn-outline-primary btn-modern"
-							        ng-disabled="!player.hasOriginal || !player.normalized" ng-click="switchPlayer()">
-								<i class="fas fa-right-left"></i> Basculer sur l'autre, au même instant
-							</button>
+						<div class="modal-footer">
+							<small class="text-muted">
+								<kbd>←</kbd> <kbd>→</kbd> talk précédent / suivant ·
+								<kbd>espace</kbd> lecture / pause ·
+								<kbd>B</kbd> écouter l'autre version, les deux défilent ensemble
+							</small>
 						</div>
 					</div>
 				</div>

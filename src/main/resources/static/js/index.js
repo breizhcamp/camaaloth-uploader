@@ -265,36 +265,329 @@ angular.module('videosApp', [])
 		});
 	}
 
+	// ----- Navigation d'un talk à l'autre, dans l'ordre de la liste filtrée et triée -----
+
+	// le voisin dans la liste affichée, null en bout de liste
+	$scope.neighbor = function(video, step) {
+		if (!video) return null;
+		var list = $scope.visibleVideos();
+		for (var i = 0; i < list.length; i++) {
+			if (list[i].dirName === video.dirName) return list[i + step] || null;
+		}
+		return null;
+	}
+
+	function isShown(id) {
+		return document.getElementById(id).classList.contains('show');
+	}
+
+	$scope.go = function(step) {
+		if (isShown('player-modal')) {
+			var next = $scope.neighbor($scope.player, step);
+			if (!next) return;
+			stopPlayers();
+			$scope.player = next;
+			$scope.detail = next;
+			resetTransport();
+		} else if (isShown('video-modal')) {
+			$scope.detail = $scope.neighbor($scope.detail, step) || $scope.detail;
+		}
+	}
+
+	document.addEventListener('keydown', function(event) {
+		if (!isShown('player-modal') && !isShown('video-modal')) return;
+		// la saisie et le slider gardent leurs touches
+		var tag = event.target.tagName;
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+		var key = event.key;
+		if (key === 'ArrowLeft' || key === 'ArrowRight') {
+			event.preventDefault();
+			$scope.$apply(function() { $scope.go(key === 'ArrowLeft' ? -1 : 1); });
+		} else if (isShown('player-modal') && key === ' ' && tag !== 'BUTTON') {
+			event.preventDefault();
+			$scope.$apply($scope.togglePlay);
+		} else if (isShown('player-modal') && (key === 'b' || key === 'B')) {
+			$scope.$apply($scope.switchPlayer);
+		}
+	});
+
+	// ----- Lecteurs : l'original et la normalisée, un seul son à la fois -----
+
+	$scope.sides = [
+		{key: 'original', label: 'Original', icon: 'fa-microphone', missing: 'Pas de fichier original.'},
+		{key: 'normalized', label: 'Normalisée', icon: 'fa-volume-high', missing: 'Pas encore normalisée.'}
+	];
+
+	function playerElement(side) {
+		return document.getElementById('player-' + side);
+	}
+
+	$scope.available = function(side) {
+		return !!$scope.player && (side === 'original' ? $scope.player.hasOriginal : $scope.player.normalized);
+	}
+
+	// la normalisée par défaut, c'est celle qui part sur YouTube
+	function resetTransport() {
+		var active = $scope.transport && $scope.available($scope.transport.active)
+			? $scope.transport.active
+			: ($scope.available('normalized') ? 'normalized' : 'original');
+		$scope.transport = {active: active, playing: false, time: 0, duration: 0};
+	}
+	$scope.transport = {active: 'normalized', playing: false, time: 0, duration: 0};
+
+	function stopPlayers() {
+		eachPlayer(function(el) {
+			el.pause();
+			if (el.meter) {
+				el.meter.history = [];
+				el.meter.last = undefined;
+			}
+		});
+	}
+
 	// l'original et la normalisée côte à côte, à la place du détail : bootstrap n'empile pas les fenêtres
 	$scope.showPlayers = function(video) {
 		$scope.player = video;
+		resetTransport();
 		bootstrap.Modal.getOrCreateInstance(document.getElementById('video-modal')).hide();
 		$timeout(function() {
 			bootstrap.Modal.getOrCreateInstance(document.getElementById('player-modal')).show();
 		});
 	}
 
+	// les deux vidéos tournent ensemble, seule celle à l'écoute s'entend : basculer compare le même passage
+	$scope.togglePlay = function() {
+		var lead = playerElement($scope.transport.active);
+		if (!lead) return;
+		if (lead.paused) play();
+		else eachPlayer(function(el) { el.pause(); });
+	}
+
+	function eachPlayer(action) {
+		['original', 'normalized'].forEach(function(side) {
+			var el = playerElement(side);
+			if (el) action(el, side);
+		});
+	}
+
+	function play() {
+		eachPlayer(function(el, side) { meterOf(side); });
+		applyGains();
+		audioContext.resume();
+		var time = playerElement($scope.transport.active).currentTime;
+		eachPlayer(function(el) {
+			el.currentTime = time;
+			el.play();
+		});
+	}
+
+	// couper par le gain et non par muted : l'analyseur, branché avant, voit encore le son de l'autre
+	function applyGains() {
+		eachPlayer(function(el, side) {
+			if (el.meter) el.meter.gain.gain.value = side === $scope.transport.active ? 1 : 0;
+		});
+	}
+
+	$scope.listenTo = function(side) {
+		if (side === $scope.transport.active || !playerElement(side)) return;
+		$scope.transport.active = side;
+		applyGains();
+		syncTransport();
+	}
+
+	$scope.switchPlayer = function() {
+		$scope.listenTo($scope.transport.active === 'original' ? 'normalized' : 'original');
+	}
+
+	$scope.clickVideo = function(side) {
+		if (side === $scope.transport.active) $scope.togglePlay();
+		else $scope.listenTo(side);
+	}
+
+	// la vidéo muette suit celle à l'écoute : vitesse retouchée pour un petit écart, recalée au-delà
+	function keepInSync() {
+		var lead = playerElement($scope.transport.active);
+		var follow = playerElement($scope.transport.active === 'original' ? 'normalized' : 'original');
+		if (!lead || !follow) return;
+		if (lead.paused) {
+			if (!follow.paused) follow.pause();
+			return;
+		}
+		if (follow.paused && !follow.ended) follow.play();
+		var drift = follow.currentTime - lead.currentTime;
+		if (Math.abs(drift) > 0.5) {
+			follow.currentTime = lead.currentTime;
+			follow.playbackRate = 1;
+		} else if (Math.abs(drift) > 0.04) {
+			follow.playbackRate = drift > 0 ? 0.95 : 1.05;
+		} else {
+			follow.playbackRate = 1;
+		}
+	}
+
+	// les deux au même instant, pour que basculer compare le même passage
+	function seek(time) {
+		eachPlayer(function(el) { el.currentTime = time; });
+	}
+
+	$scope.formatTime = function(seconds) {
+		seconds = Math.floor(seconds || 0);
+		var h = Math.floor(seconds / 3600), m = Math.floor(seconds / 60) % 60, s = seconds % 60;
+		return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (s < 10 ? '0' : '') + s;
+	}
+
+	function syncTransport() {
+		var el = playerElement($scope.transport.active);
+		if (!el) return;
+		$scope.transport.playing = !el.paused;
+		$scope.transport.time = el.currentTime;
+		$scope.transport.duration = isFinite(el.duration) ? el.duration : 0;
+		var slider = document.getElementById('player-seek');
+		if (slider && document.activeElement !== slider) {
+			slider.max = $scope.transport.duration;
+			slider.value = $scope.transport.time;
+		}
+	}
+
 	var playerModal = document.getElementById('player-modal');
 	// retirer les lecteurs du dom arrête la lecture et le téléchargement de la vidéo
 	playerModal.addEventListener('hidden.bs.modal', function() {
+		cancelAnimationFrame(drawing);
 		$scope.$apply(function() { $scope.player = null; });
 	});
-	// un seul son à la fois : lancer un lecteur met l'autre en pause
-	playerModal.addEventListener('play', function(event) {
-		playerModal.querySelectorAll('video').forEach(function(other) {
-			if (other !== event.target) other.pause();
-		});
-	}, true);
+	playerModal.addEventListener('shown.bs.modal', function() {
+		drawing = requestAnimationFrame(drawMeters);
+	});
+	// quelques fois par seconde seulement : un cycle angular par image retrierait toute la liste
+	['play', 'pause', 'ended', 'timeupdate', 'seeked', 'loadedmetadata', 'durationchange'].forEach(function(type) {
+		playerModal.addEventListener(type, function() { $scope.$applyAsync(syncTransport); }, true);
+	});
+	playerModal.addEventListener('input', function(event) {
+		if (event.target.id === 'player-seek') seek(+event.target.value);
+	});
+	// le slider relâché rend les flèches à la navigation entre talks
+	playerModal.addEventListener('change', function(event) {
+		if (event.target.id === 'player-seek') event.target.blur();
+	});
 
-	// pour comparer : reprend sur l'autre version là où en était celle qui jouait
-	$scope.switchPlayer = function() {
-		var original = document.getElementById('player-original');
-		var normalized = document.getElementById('player-normalized');
-		var from = original.paused ? normalized : original;
-		var to = from === original ? normalized : original;
-		to.currentTime = from.currentTime;
-		from.pause();
-		to.play();
+	// ----- Visualisation du son : crête et RMS des dernières secondes, en dBFS -----
+
+	var audioContext = null;
+	var drawing = null;
+	var FLOOR_DB = -60;
+
+	// une seule source par élément, le navigateur refuse la seconde : gardée sur l'élément
+	function meterOf(side) {
+		var el = playerElement(side);
+		if (!el.meter) {
+			audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+			var source = audioContext.createMediaElementSource(el);
+			var analyser = audioContext.createAnalyser();
+			analyser.fftSize = 2048;
+			source.connect(analyser);
+			var gain = audioContext.createGain();
+			source.connect(gain);
+			gain.connect(audioContext.destination);
+			el.meter = {analyser: analyser, gain: gain, samples: new Float32Array(analyser.fftSize), history: []};
+		}
+		return el.meter;
+	}
+
+	function toDb(amplitude) {
+		return amplitude > 0 ? Math.max(FLOOR_DB, 20 * Math.log10(amplitude)) : FLOOR_DB;
+	}
+
+	function drawMeters() {
+		keepInSync();
+		// l'horloge de celle à l'écoute pour les deux : leurs colonnes restent alignées
+		var lead = playerElement($scope.transport.active);
+		var now = lead ? lead.currentTime : 0;
+		['original', 'normalized'].forEach(function(side) {
+			var canvas = document.getElementById('meter-' + side);
+			if (canvas) drawMeter(canvas, playerElement(side), now);
+		});
+		drawing = requestAnimationFrame(drawMeters);
+	}
+
+	// une colonne par tranche de temps de la vidéo, et non par image affichée : la cadence d'affichage
+	// varie (120 ou 60 Hz, images sautées sous la charge), et le défilement accélérait puis ralentissait
+	var COLUMN_SECONDS = 0.05;
+
+	function drawMeter(canvas, el, now) {
+		var ratio = window.devicePixelRatio || 1;
+		var width = Math.round(canvas.clientWidth * ratio), height = Math.round(canvas.clientHeight * ratio);
+		if (canvas.width !== width || canvas.height !== height) {
+			canvas.width = width;
+			canvas.height = height;
+		}
+		var meter = el && el.meter;
+		var bar = 2 * ratio;
+
+		if (meter && !el.paused) {
+			// un saut dans la vidéo : l'historique ne correspond plus à ce qui précède
+			if (meter.last === undefined || now < meter.last || now - meter.last > 1) {
+				meter.history = [];
+				meter.last = now;
+				meter.acc = {peak: 0, sum: 0, count: 0};
+			}
+			// cumulé sur toutes les images de la tranche, pour ne pas manquer une crête entre deux colonnes
+			meter.analyser.getFloatTimeDomainData(meter.samples);
+			for (var i = 0; i < meter.samples.length; i++) {
+				var v = Math.abs(meter.samples[i]);
+				if (v > meter.acc.peak) meter.acc.peak = v;
+				meter.acc.sum += v * v;
+			}
+			meter.acc.count += meter.samples.length;
+
+			var columns = Math.floor((now - meter.last) / COLUMN_SECONDS);
+			if (columns > 0) {
+				var column = {peak: toDb(meter.acc.peak), rms: toDb(Math.sqrt(meter.acc.sum / meter.acc.count))};
+				for (var c = 0; c < columns; c++) meter.history.push(column);
+				meter.last += columns * COLUMN_SECONDS;
+				meter.acc = {peak: 0, sum: 0, count: 0};
+			}
+			var keep = Math.floor(width / bar);
+			if (meter.history.length > keep) meter.history.splice(0, meter.history.length - keep);
+		}
+
+		var ctx = canvas.getContext('2d');
+		ctx.clearRect(0, 0, width, height);
+		// hauteur depuis le centre, en dB : un son faible reste visible, ce que l'échelle linéaire écrasait
+		var y = function(db) { return (db - FLOOR_DB) / -FLOOR_DB * height / 2; };
+		var history = meter ? meter.history : [];
+		var x0 = width - history.length * bar;
+		for (var j = 0; j < history.length; j++) {
+			var p = y(history[j].peak), r = y(history[j].rms);
+			ctx.fillStyle = '#6ea8fe';
+			ctx.fillRect(x0 + j * bar, height / 2 - p, bar - ratio / 2, 2 * p);
+			ctx.fillStyle = '#0d6efd';
+			ctx.fillRect(x0 + j * bar, height / 2 - r, bar - ratio / 2, 2 * r);
+		}
+
+		// repères : la crête visée par la normalisation, et le niveau visé
+		ctx.font = (10 * ratio) + 'px sans-serif';
+		[{db: -3, color: '#dc3545'}, {db: -23, color: '#ffc107'}].forEach(function(mark) {
+			ctx.strokeStyle = ctx.fillStyle = mark.color;
+			ctx.setLineDash([4 * ratio, 4 * ratio]);
+			ctx.beginPath();
+			[height / 2 - y(mark.db), height / 2 + y(mark.db)].forEach(function(at) {
+				ctx.moveTo(0, at);
+				ctx.lineTo(width, at);
+			});
+			ctx.stroke();
+			// sous la ligne : au-dessus, celle de -3 dB sortirait du cadre
+			ctx.fillText(mark.db + ' dB', 4 * ratio, height / 2 - y(mark.db) + 11 * ratio);
+		});
+		ctx.setLineDash([]);
+
+		if (history.length) {
+			var last = history[history.length - 1];
+			ctx.fillStyle = '#f8f9fa';
+			ctx.textAlign = 'right';
+			ctx.fillText('crête ' + last.peak.toFixed(1) + ' · RMS ' + last.rms.toFixed(1) + ' dBFS', width - 4 * ratio, 12 * ratio);
+			ctx.textAlign = 'left';
+		}
 	}
 
 	$scope.videoUrl = function(video, original) {

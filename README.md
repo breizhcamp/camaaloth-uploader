@@ -140,9 +140,23 @@ envoyé et niveau sonore. « Aucune description pour ce talk dans le schedule ch
 `<assetsDir>/schedule.json` est introuvable (le log dit alors `Cannot read the schedule`) ou ne
 contient pas ce talk : vérifier `<recordingDir>/assets/schedule.json`, ou `--camaaloth-uploader.assetsDir`.
 
-**Écouter l'original et la version normalisée** ouvre les deux vidéos côte à côte. Lancer l'une met
-l'autre en pause, et **Basculer sur l'autre, au même instant** permet de comparer le son au même
-passage.
+**Écouter l'original et la version normalisée** ouvre les deux vidéos côte à côte, avec une seule
+barre de lecture : elles défilent ensemble, image et son, et seule celle à l'écoute s'entend. Passer
+de l'une à l'autre ne change que le son, au même instant, pour comparer le même passage. La vidéo
+muette suit l'autre, en retouchant sa vitesse pour un petit écart et en se recalant au-delà d'une
+demi-seconde. Sous chaque vidéo, un vumètre défile sur les dernières secondes, pour les deux en même
+temps et au rythme de la vidéo (une colonne par 50 ms, repartant de zéro après un saut) : crête
+(clair) et RMS (foncé) en dBFS, avec un repère à -3 dB, la crête visée par la normalisation, et à
+-23 dB, le niveau visé.
+
+Dans le détail comme dans les lecteurs, les flèches ‹ › de l'en-tête passent au talk précédent ou
+suivant, dans l'ordre de la liste filtrée et triée. Au clavier :
+
+| Touche | Action |
+|---|---|
+| `←` `→` | talk précédent / suivant |
+| `espace` | lecture / pause (lecteurs) |
+| `B` | écouter l'autre version (lecteurs) |
 
 #### Filtrer et trier
 
